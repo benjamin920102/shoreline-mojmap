@@ -1,0 +1,86 @@
+accessWidener v1 named
+accessible class net/minecraft/network/protocol/game/ServerboundInteractPacket$ActionType
+accessible class net/minecraft/network/protocol/game/ServerboundInteractPacket$InteractionAtLocationAction
+accessible class net/minecraft/network/protocol/game/ServerboundInteractPacket$Action
+accessible class net/minecraft/client/gui/Font$StringRenderOutput
+accessible method net/minecraft/client/gui/Font adjustColor (I)I
+accessible method net/minecraft/client/gui/Font renderText (Ljava/lang/String;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)F
+accessible field net/minecraft/client/gui/Font filterFishyGlyphs Z
+accessible method net/minecraft/client/gui/Font getFontSet (Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/client/gui/font/FontSet;
+accessible field net/minecraft/client/player/LocalPlayer xLast D
+accessible field net/minecraft/client/player/LocalPlayer yLast1 D
+accessible field net/minecraft/client/player/LocalPlayer zLast D
+accessible field com/mojang/blaze3d/systems/RenderSystem shaderLightDirections [Lorg/joml/Vector3f;
+accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;Lcom/mojang/blaze3d/vertex/VertexFormat;Lcom/mojang/blaze3d/vertex/VertexFormat$Mode;ILnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
+accessible class net/minecraft/client/renderer/RenderType$CompositeState
+accessible class net/minecraft/client/renderer/RenderStateShard$TextureStateShard
+accessible field net/minecraft/client/renderer/RenderStateShard RENDERTYPE_GLINT_SHADER Lnet/minecraft/client/renderer/RenderStateShard$ShaderStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard COLOR_WRITE Lnet/minecraft/client/renderer/RenderStateShard$WriteMaskStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard NO_CULL Lnet/minecraft/client/renderer/RenderStateShard$CullStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard GLINT_TRANSPARENCY Lnet/minecraft/client/renderer/RenderStateShard$TransparencyStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard GLINT_TEXTURING Lnet/minecraft/client/renderer/RenderStateShard$TexturingStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard EQUAL_DEPTH_TEST Lnet/minecraft/client/renderer/RenderStateShard$DepthTestStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard NO_DEPTH_TEST Lnet/minecraft/client/renderer/RenderStateShard$DepthTestStateShard;
+accessible class net/minecraft/client/renderer/RenderStateShard$DepthTestStateShard
+accessible class net/minecraft/client/renderer/RenderStateShard$ShaderStateShard
+accessible class net/minecraft/client/renderer/RenderStateShard$LightmapStateShard
+accessible class net/minecraft/client/renderer/RenderStateShard$BooleanStateShard
+accessible field net/minecraft/client/renderer/RenderStateShard setupState Ljava/lang/Runnable;
+accessible field net/minecraft/client/renderer/RenderStateShard clearState Ljava/lang/Runnable;
+accessible class net/minecraft/client/resources/SkinManager$TextureCache
+accessible class net/minecraft/client/Minecraft$GameLoadCookie
+accessible method net/minecraft/client/renderer/entity/player/PlayerRenderer setModelProperties (Lnet/minecraft/client/player/AbstractClientPlayer;)V
+accessible class net/minecraft/client/renderer/FogRenderer$MobEffectFogFunction
+accessible method net/minecraft/client/Minecraft startAttack ()Z
+accessible field net/minecraft/client/OptionInstance values Lnet/minecraft/client/OptionInstance$ValueSet;
+accessible class net/minecraft/client/particle/FireworkParticles$SparkParticle
+accessible method net/minecraft/client/renderer/entity/player/PlayerRenderer getArmPose (Lnet/minecraft/client/player/AbstractClientPlayer;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/client/model/HumanoidModel$ArmPose;
+accessible method net/minecraft/client/renderer/entity/LivingEntityRenderer setupRotations (Lnet/minecraft/world/entity/LivingEntity;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V
+accessible method net/minecraft/client/renderer/entity/LivingEntityRenderer scale (Lnet/minecraft/world/entity/LivingEntity;Lcom/mojang/blaze3d/vertex/PoseStack;F)V
+accessible method net/minecraft/client/renderer/entity/player/PlayerRenderer setupRotations (Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V
+accessible method net/minecraft/client/renderer/entity/player/PlayerRenderer scale (Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;F)V
+accessible field net/minecraft/client/model/LlamaModel head Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/LlamaModel body Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/LlamaModel rightHindLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/LlamaModel leftHindLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/LlamaModel rightFrontLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/LlamaModel leftFrontLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/LlamaModel rightChest Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/LlamaModel leftChest Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/network/protocol/game/VecDeltaCodec base Lnet/minecraft/world/phys/Vec3;
+accessible class net/minecraft/client/renderer/chunk/SectionRenderDispatcher$RenderSection$RebuildTask
+accessible class net/minecraft/client/multiplayer/ClientChunkCache$Storage
+accessible method net/minecraft/client/multiplayer/ClientChunkCache$Storage getIndex (II)I
+accessible field net/minecraft/client/multiplayer/ClientChunkCache$Storage chunks Ljava/util/concurrent/atomic/AtomicReferenceArray;
+accessible method net/minecraft/client/renderer/entity/LivingEntityRenderer getBob (Lnet/minecraft/world/entity/LivingEntity;F)F
+accessible field net/minecraft/client/model/RabbitModel head Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel leftEar Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel rightEar Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel nose Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel leftRearFoot Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel rightRearFoot Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel leftHaunch Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel rightHaunch Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel body Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel leftFrontLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel rightFrontLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/RabbitModel tail Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/renderer/entity/EndCrystalRenderer base Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/renderer/entity/EndCrystalRenderer glass Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/renderer/entity/EndCrystalRenderer cube Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/geom/ModelPart cubes Ljava/util/List;
+accessible field net/minecraft/client/model/geom/ModelPart children Ljava/util/Map;
+accessible field net/minecraft/client/model/geom/ModelPart$Cube polygons [Lnet/minecraft/client/model/geom/ModelPart$Polygon;
+accessible field net/minecraft/world/entity/WalkAnimationState position F
+accessible field net/minecraft/client/gui/screens/inventory/AnvilScreen name Lnet/minecraft/client/gui/components/EditBox;
+accessible field net/minecraft/client/renderer/entity/LivingEntityRenderer layers Ljava/util/List;
+accessible field net/minecraft/world/entity/LivingEntity swimAmount F
+accessible field net/minecraft/world/entity/LivingEntity swimAmountO F
+accessible field net/minecraft/client/renderer/ItemInHandRenderer oMainHandHeight F
+accessible field net/minecraft/client/renderer/ItemInHandRenderer mainHandHeight F
+accessible field net/minecraft/client/renderer/ItemInHandRenderer oOffHandHeight F
+accessible field net/minecraft/client/renderer/ItemInHandRenderer offHandHeight F
+accessible field net/minecraft/world/level/BaseSpawner spawnDelay I
+accessible field net/minecraft/network/syncher/SynchedEntityData itemsById [Lnet/minecraft/network/syncher/SynchedEntityData$DataItem;
+accessible field net/minecraft/world/entity/Entity DATA_POSE Lnet/minecraft/network/syncher/EntityDataAccessor;
+accessible method net/minecraft/world/level/block/state/BlockBehaviour getShape (Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;

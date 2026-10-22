@@ -1,0 +1,97 @@
+/*
+ * Satin
+ * Copyright (C) 2019-2024 Ladysnake
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; If not, see <https://www.gnu.org/licenses>.
+ */
+package net.shoreline.client.api.render.satin;
+
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceProvider;
+import net.shoreline.client.impl.event.ResolutionEvent;
+import net.shoreline.eventbus.EventBus;
+import net.shoreline.eventbus.annotation.EventListener;
+
+import java.util.Set;
+import java.util.function.Consumer;
+
+public final class ReloadableShaderEffectManager implements ShaderEffectManager {
+    public static final ReloadableShaderEffectManager INSTANCE = new ReloadableShaderEffectManager();
+
+    public ReloadableShaderEffectManager() {
+        EventBus.INSTANCE.subscribe(this);
+    }
+
+    private final Set<ResettableManagedShaderBase<?>> managedShaders = new ReferenceOpenHashSet<>();
+
+    @EventListener
+    public void onResolution(ResolutionEvent event)
+    {
+        onResolutionChanged(event.getWindow().getWidth(), event.getWindow().getHeight());
+    }
+
+    @Override
+    public ManagedShaderEffect manage(ResourceLocation location) {
+        return manage(location, s -> {
+        });
+    }
+
+    @Override
+    public ManagedShaderEffect manage(ResourceLocation location, Consumer<ManagedShaderEffect> initCallback) {
+        ResettableManagedShaderEffect ret = new ResettableManagedShaderEffect(location, initCallback);
+        managedShaders.add(ret);
+        return ret;
+    }
+
+    @Override
+    public ManagedCoreShader manageCoreShader(ResourceLocation location) {
+        return manageCoreShader(location, DefaultVertexFormat.NEW_ENTITY);
+    }
+
+    @Override
+    public ManagedCoreShader manageCoreShader(ResourceLocation location, VertexFormat vertexFormat) {
+        return manageCoreShader(location, vertexFormat, (s) -> {
+        });
+    }
+
+    @Override
+    public ManagedCoreShader manageCoreShader(ResourceLocation location, VertexFormat vertexFormat, Consumer<ManagedCoreShader> initCallback) {
+        ResettableManagedCoreShader ret = new ResettableManagedCoreShader(location, vertexFormat, initCallback);
+        managedShaders.add(ret);
+        return ret;
+    }
+
+    public void reload(ResourceProvider shaderResources) {
+        for (ResettableManagedShaderBase<?> ss : managedShaders) {
+            ss.initializeOrLog(shaderResources);
+        }
+    }
+
+    public void onResolutionChanged(int newWidth, int newHeight) {
+        runShaderSetup(newWidth, newHeight);
+    }
+
+    private void runShaderSetup(int newWidth, int newHeight) {
+        if (!managedShaders.isEmpty()) {
+            for (ResettableManagedShaderBase<?> ss : managedShaders) {
+                if (ss.isInitialized()) {
+                    ss.setup(newWidth, newHeight);
+                }
+            }
+        }
+    }
+}
