@@ -35,3 +35,9 @@ chmod +x gradlew
 為修正反編譯錯誤，另以快取中的 Minecraft、Fabric、Baritone 映射依賴和原 access wideners 執行暫時的離線 Gradle `compileJava`。774 個 Java 檔案全部通過；此離線編譯未執行 annotation processor，不等同正式專案已通過 Loom。
 
 未執行完整 build、遊戲啟動或額外測試。交付內容不包含上述暫時編譯環境、快取或編譯產物。
+
+## 2026-10-22 注入目標修正
+
+依啟動紀錄修正原註解中夾雜空白、導致未匹配原 refmap 的四處 selector：Entity 的 block speed factor Redirect、PlayerRenderer 的 HEAD/TAIL render Inject、FireworkEntityRenderer 的 render Inject。使用移除非語意空白後的原 refmap key，依 intermediary member 與 descriptor 轉換成 Mojmap。所有注入與功能保持啟用。
+
+本次修改後離線 `compileJava` 通過；正式 Loom annotation processor 與遊戲執行期仍未驗證。

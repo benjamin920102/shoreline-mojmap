@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({FireworkEntityRenderer.class})
 public class MixinFireworkRocketEntityRenderer {
    @Inject(
-      method = {"render(Lnet/minecraft/entity/projectile/FireworkRocketEntity;FFLnet/minecraft/client/util/math/ MatrixStack;Lnet/minecraft/client/render/ VertexConsumerProvider;I)V"},
+      method = {"render(Lnet/minecraft/world/entity/projectile/FireworkRocketEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"},
       at = {@At("HEAD")},
       cancellable = true
    )

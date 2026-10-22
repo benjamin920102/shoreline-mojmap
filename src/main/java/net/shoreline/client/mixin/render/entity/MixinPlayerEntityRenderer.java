@@ -38,7 +38,7 @@ public class MixinPlayerEntityRenderer {
    private boolean prevFallFlying;
 
    @Inject(
-      method = {"render(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render /VertexConsumerProvider;I)V"},
+      method = {"render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"},
       at = {@At("HEAD")}
    )
    private void onRenderHead(
@@ -74,7 +74,7 @@ public class MixinPlayerEntityRenderer {
    }
 
    @Inject(
-      method = {"render(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render /VertexConsumerProvider;I)V"},
+      method = {"render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"},
       at = {@At("TAIL")}
    )
    private void onRenderTail(

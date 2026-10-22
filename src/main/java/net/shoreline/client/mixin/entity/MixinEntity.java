@@ -96,7 +96,7 @@ public abstract class MixinEntity implements Globals {
       method = {"getBlockSpeedFactor()F"},
       at = @At(
          value = "INVOKE",
-         target = "Lnet/minecraft/block/BlockState;getBlock()Lnet/minecraft/ block/Block;"
+         target = "Lnet/minecraft/world/level/block/state/BlockState;getBlock()Lnet/minecraft/world/level/block/Block;"
       )
    )
    private Block hookGetVelocityMultiplier(BlockState instance) {
