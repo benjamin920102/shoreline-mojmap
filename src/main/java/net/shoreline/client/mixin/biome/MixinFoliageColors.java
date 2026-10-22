@@ -8,18 +8,19 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(FoliageColor.class)
-public class MixinFoliageColors
-{
-    @Inject(method = "getDefaultColor", at = @At(value = "HEAD"), cancellable = true)
-    private static void hookGetDefaultColor(CallbackInfoReturnable<Integer> cir)
-    {
-        BiomeColorEvent.Foliage foliageEvent = new BiomeColorEvent.Foliage();
-        EventBus.INSTANCE.dispatch(foliageEvent);
-        if (foliageEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(foliageEvent.getColor());
-        }
-    }
+@Mixin({FoliageColor.class})
+public class MixinFoliageColors {
+   @Inject(
+      method = {"getDefaultColor()I"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private static void hookGetDefaultColor(CallbackInfoReturnable<Integer> cir) {
+      BiomeColorEvent.Foliage foliageEvent = new BiomeColorEvent.Foliage();
+      EventBus.INSTANCE.dispatch(foliageEvent);
+      if (foliageEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(foliageEvent.getColor());
+      }
+   }
 }

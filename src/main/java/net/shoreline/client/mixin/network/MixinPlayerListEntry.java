@@ -17,60 +17,47 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(PlayerInfo.class)
-public class MixinPlayerListEntry implements Globals
-{
+@Mixin({PlayerInfo.class})
+public class MixinPlayerListEntry implements Globals {
+   @Shadow
+   @Final
+   private GameProfile profile;
+   @Unique
+   private ResourceLocation capeTexture;
+   @Unique
+   private boolean capeTextureLoaded;
 
-    @Shadow
-    @Final
-    private GameProfile profile;
-    @Unique
-    private ResourceLocation capeTexture;
-    @Unique
-    private boolean capeTextureLoaded;
+   @Inject(
+      method = {"<init>(Lcom/mojang/authlib/GameProfile;Z)V"},
+      at = {@At("TAIL")}
+   )
+   private void hookInit(GameProfile profile, boolean secureChatEnforced, CallbackInfo ci) {
+      if (!this.capeTextureLoaded) {
+         LoadCapeEvent loadCapeEvent = new LoadCapeEvent(profile, identifier -> this.capeTexture = identifier);
+         EventBus.INSTANCE.dispatch(loadCapeEvent);
+         this.capeTextureLoaded = true;
+      }
+   }
 
-    /**
-     * @param profile
-     * @param secureChatEnforced
-     * @param ci
-     */
-    @Inject(method = "<init>(Lcom/mojang/authlib/GameProfile;Z)V", at = @At("TAIL"))
-    private void hookInit(GameProfile profile, boolean secureChatEnforced, CallbackInfo ci)
-    {
-        if (capeTextureLoaded)
-        {
-            return;
-        }
-        LoadCapeEvent loadCapeEvent = new LoadCapeEvent(profile, identifier ->
-        {
-            capeTexture = identifier;
-        });
-        EventBus.INSTANCE.dispatch(loadCapeEvent);
-        capeTextureLoaded = true;
-    }
-
-    /**
-     * @param cir
-     */
-    @Inject(method = "getSkin", at = @At("TAIL"), cancellable = true)
-    private void hookGetSkinTextures(CallbackInfoReturnable<PlayerSkin> cir)
-    {
-        CapesEvent capesEvent = new CapesEvent(profile);
-        EventBus.INSTANCE.dispatch(capesEvent);
-        if (!capesEvent.isCanceled())
-        {
-            return;
-        }
-        ResourceLocation identifier = capesEvent.getShowOptifine() ? capeTexture : null;
-        if (capesEvent.getTexture() != null)
-        {
+   @Inject(
+      method = {"getSkin()Lnet/minecraft/client/resources/PlayerSkin;"},
+      at = {@At("TAIL")},
+      cancellable = true
+   )
+   private void hookGetSkinTextures(CallbackInfoReturnable<PlayerSkin> cir) {
+      CapesEvent capesEvent = new CapesEvent(this.profile);
+      EventBus.INSTANCE.dispatch(capesEvent);
+      if (capesEvent.isCanceled()) {
+         ResourceLocation identifier = capesEvent.getShowOptifine() ? this.capeTexture : null;
+         if (capesEvent.getTexture() != null) {
             identifier = capesEvent.getTexture();
-        }
-        if (identifier != null)
-        {
-            PlayerSkin t = cir.getReturnValue();
+         }
+
+         if (identifier != null) {
+            PlayerSkin t = (PlayerSkin)cir.getReturnValue();
             PlayerSkin customCapeTexture = new PlayerSkin(t.texture(), t.textureUrl(), identifier, identifier, t.model(), t.secure());
             cir.setReturnValue(customCapeTexture);
-        }
-    }
+         }
+      }
+   }
 }

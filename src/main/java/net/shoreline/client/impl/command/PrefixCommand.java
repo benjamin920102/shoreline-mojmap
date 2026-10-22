@@ -8,37 +8,27 @@ import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.KeyboardUtil;
 import net.shoreline.client.util.chat.ChatUtil;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class PrefixCommand extends Command
-{
+public class PrefixCommand extends Command {
+   public PrefixCommand() {
+      super("Prefix", "Allows you to change the chat command prefix", literal("prefix"));
+   }
 
-    public PrefixCommand()
-    {
-        super("Prefix", "Allows you to change the chat command prefix", literal("prefix"));
-    }
-
-    @Override
-    public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder)
-    {
-        builder.then(argument("prefix", StringArgumentType.string()).executes(c ->
-        {
-            final String prefix = StringArgumentType.getString(c, "prefix");
-            if (prefix.length() > 1)
-            {
-                ChatUtil.error("Prefix can only be one character!");
-                return 0;
-            }
+   @Override
+   public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
+      ((LiteralArgumentBuilder)builder.then(argument("prefix", StringArgumentType.string()).executes(c -> {
+         String prefix = StringArgumentType.getString(c, "prefix");
+         if (prefix.length() > 1) {
+            ChatUtil.error("Prefix can only be one character!");
+            return 0;
+         } else {
             int keycode = KeyboardUtil.getKeyCode(prefix);
             Managers.COMMAND.setPrefix(prefix, keycode);
             ChatUtil.clientSendMessage("Command prefix changed to §s" + prefix);
             return 1;
-        })).executes(c ->
-        {
-            ChatUtil.error("Please provide a new prefix!");
-            return 1;
-        });
-    }
+         }
+      }))).executes(c -> {
+         ChatUtil.error("Please provide a new prefix!");
+         return 1;
+      });
+   }
 }

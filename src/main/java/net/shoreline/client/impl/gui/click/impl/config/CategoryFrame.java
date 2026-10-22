@@ -2,8 +2,9 @@ package net.shoreline.client.impl.gui.click.impl.config;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.client.gui.GuiGraphics;
-import net.shoreline.client.api.config.Config;
 import net.shoreline.client.api.config.Serializable;
 import net.shoreline.client.api.module.Module;
 import net.shoreline.client.api.module.ModuleCategory;
@@ -19,366 +20,253 @@ import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.render.animation.Animation;
 import net.shoreline.client.util.render.animation.Easing;
 import net.shoreline.client.util.string.EnumFormatter;
-import org.lwjgl.glfw.GLFW;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+public class CategoryFrame extends Frame implements Serializable<CategoryFrame> {
+   private final String name;
+   private final ModuleCategory category;
+   private final List<ModuleButton> moduleButtons = new CopyOnWriteArrayList<>();
+   private float off;
+   private float inner;
+   private boolean open;
+   private boolean drag;
+   private final Animation categoryAnimation = new Animation(false, 200.0F, Easing.CUBIC_IN_OUT);
+   private SearchButton searchButton;
 
-/**
- * Configuration {@link Frame} (aka the "ClickGui" frames) which
- * allows the user to configure a {@link Module}'s {@link Config} values.
- *
- * @author linus
- * @see Frame
- * @see Module
- * @see Config
- * @since 1.0
- */
-public class CategoryFrame extends Frame implements Serializable<CategoryFrame>
-{
-    //
-    private final String name;
-    private final ModuleCategory category;
-    // private final Identifier categoryIcon;
-    // module components
-    private final List<ModuleButton> moduleButtons =
-            new CopyOnWriteArrayList<>();
-    // global module offset
-    private float off, inner;
-    private boolean open;
-    private boolean drag;
-    //
-    private final Animation categoryAnimation = new Animation(false, 200, Easing.CUBIC_IN_OUT);
+   public CategoryFrame(ModuleCategory category, float x, float y, float width, float height) {
+      super(x, y, width, height);
+      this.category = category;
+      this.name = EnumFormatter.formatEnum(category);
 
-    private SearchButton searchButton;
+      for (Module module : Managers.MODULE.getModules()) {
+         if (module.getCategory() == category) {
+            this.moduleButtons.add(new ModuleButton(module, this, x, y));
+         }
+      }
 
-    /**
-     * @param x
-     * @param y
-     * @param width
-     * @param height
-     */
-    public CategoryFrame(ModuleCategory category, float x, float y,
-                         float width, float height)
-    {
-        super(x, y, width, height);
-        this.category = category;
-        // this.categoryIcon = new Identifier("shoreline", "icon/" + category.name().toLowerCase() + ".png");
-        this.name = EnumFormatter.formatEnum(category);
-        for (Module module : Managers.MODULE.getModules())
-        {
-            if (module.getCategory() == category)
-            {
-                moduleButtons.add(new ModuleButton(module, this, x, y));
+      if (category == ModuleCategory.CLIENT) {
+         this.searchButton = new SearchButton(this, x, y);
+      }
+
+      this.setOpen(true);
+   }
+
+   public CategoryFrame(ModuleCategory category, float x, float y) {
+      this(category, x, y, 105.0F, 15.0F);
+   }
+
+   @Override
+   public void render(GuiGraphics context, float mouseX, float mouseY, float delta) {
+      this.setHeight(RenderManager.textHeight() + 6.0F);
+      if (this.drag) {
+         this.x = this.x + (ClickGuiScreen.MOUSE_X - this.px);
+         this.y = this.y + (ClickGuiScreen.MOUSE_Y - this.py);
+      }
+
+      this.fheight = 2.0F * ClickGuiModule.CLICK_GUI_SCALE;
+      if (this.searchButton != null) {
+         this.fheight = this.fheight + (this.searchButton.getHeight() + 6.0F * ClickGuiModule.CLICK_GUI_SCALE);
+      }
+
+      for (ModuleButton moduleButton : this.moduleButtons) {
+         this.fheight = this.fheight + (moduleButton.getHeight() + ClickGuiModule.CLICK_GUI_SCALE);
+         if (!(moduleButton.getScaledTime() < 0.01F)) {
+            this.fheight = this.fheight + 3.0F * ClickGuiModule.CLICK_GUI_SCALE * moduleButton.getScaledTime();
+
+            for (ConfigButton<?> configButton : moduleButton.getConfigButtons()) {
+               if (configButton.getConfig().isVisible()) {
+                  this.fheight = this.fheight + configButton.getHeight() * moduleButton.getScaledTime();
+                  if (configButton instanceof ColorButton colorPicker && colorPicker.getScaledTime() > 0.01F) {
+                     this.fheight = this.fheight + colorPicker.getPickerHeight() * colorPicker.getScaledTime() * moduleButton.getScaledTime();
+                  }
+               }
             }
-        }
-        if (category == ModuleCategory.CLIENT)
-        {
-            searchButton = new SearchButton(this, x, y);
-        }
-        setOpen(true);
-    }
+         }
+      }
 
-    /**
-     * @param category
-     * @param x
-     * @param y
-     */
-    public CategoryFrame(ModuleCategory category, float x, float y)
-    {
-        this(category, x, y, 105.0f, 15.0f);
-    }
+      this.rect(context, ClickGuiModule.getInstance().getColor(1.7F));
+      int whiteText = -1;
+      this.drawStringScaled(context, this.name, this.x + 3.0F * ClickGuiModule.CLICK_GUI_SCALE, this.y + 4.0F * ClickGuiModule.CLICK_GUI_SCALE, whiteText);
+      if (this.categoryAnimation.getFactor() > 0.01F) {
+         boolean canScissor = ClickGuiModule.getInstance().getScaleFactor() == 1.0F;
+         float y1 = this.y;
+         if (this.searchButton != null) {
+            y1 += this.searchButton.getHeight() + 6.0F * ClickGuiModule.CLICK_GUI_SCALE;
+         }
 
-    /**
-     * @param context
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    @Override
-    public void render(GuiGraphics context, float mouseX, float mouseY, float delta)
-    {
-        setHeight(RenderManager.textHeight() + 6.0f);
-        if (drag)
-        {
-            x += ClickGuiScreen.MOUSE_X - px;
-            y += ClickGuiScreen.MOUSE_Y - py;
-        }
-        // draw the component
-        // context.drawTexture(categoryIcon, (int) (x + 2.0f), (int) (y + 1.0f), 0, 0, 12, 12, 12, 12);
-        fheight = 2.0f * ClickGuiModule.CLICK_GUI_SCALE;
-        if (searchButton != null)
-        {
-            fheight += searchButton.getHeight() + (6.0f * ClickGuiModule.CLICK_GUI_SCALE);
-        }
-        for (ModuleButton moduleButton : moduleButtons)
-        {
-            // account for button height
-            fheight += moduleButton.getHeight() + ClickGuiModule.CLICK_GUI_SCALE;
-            if (moduleButton.getScaledTime() < 0.01f)
-            {
-                continue;
-            }
-            fheight += 3.0f * ClickGuiModule.CLICK_GUI_SCALE * moduleButton.getScaledTime();
-            for (ConfigButton<?> configButton : moduleButton.getConfigButtons())
-            {
-                if (!configButton.getConfig().isVisible())
-                {
-                    continue;
-                }
-                // config button height may vary
-                fheight += configButton.getHeight() * moduleButton.getScaledTime();
-                if (configButton instanceof ColorButton colorPicker && colorPicker.getScaledTime() > 0.01f)
-                {
-                    fheight += colorPicker.getPickerHeight() * colorPicker.getScaledTime() * moduleButton.getScaledTime();
-                }
-            }
-        }
-        rect(context, ClickGuiModule.getInstance().getColor(1.7f));
+         if (canScissor) {
+            this.enableScissor(
+               this.x,
+               this.y + this.height * ClickGuiModule.CLICK_GUI_SCALE,
+               this.x + this.width * ClickGuiModule.CLICK_GUI_SCALE,
+               this.y + ClickGuiModule.CLICK_GUI_SCALE * this.height + this.fheight * this.categoryAnimation.getFactor()
+            );
+         }
 
-        int whiteText = -1;
-        drawStringScaled(context, name, x + (3.0f * ClickGuiModule.CLICK_GUI_SCALE), y + (4.0f * ClickGuiModule.CLICK_GUI_SCALE), whiteText);
-        if (categoryAnimation.getFactor() > 0.01f)
-        {
-            // Enabling scissor during the animation zoom in process causes some weird visual bugs
-            boolean canScissor = ClickGuiModule.getInstance().getScaleFactor() == 1.0F;
+         int fillColor = ClickGuiModule.getInstance().fixTransparency(1996488704);
+         this.fill(context, this.x, this.y + this.height * ClickGuiModule.CLICK_GUI_SCALE, this.width * ClickGuiModule.CLICK_GUI_SCALE, this.fheight, fillColor);
+         if (ClickGuiModule.getInstance().getBlur() && ClickGuiModule.getInstance().getScaleFactor() == 1.0F) {
+            mc.options.menuBackgroundBlurriness().set(7);
+            mc.gameRenderer.processBlurEffect(delta);
+            mc.getMainRenderTarget().bindWrite(false);
+            mc.options.menuBackgroundBlurriness().set(5);
+         }
 
-            float y1 = y;
-            if (searchButton != null)
-            {
-                y1 += searchButton.getHeight() + (6.0f * ClickGuiModule.CLICK_GUI_SCALE);
-            }
-            if (canScissor)
-            {
-                enableScissor(x, y + (height * ClickGuiModule.CLICK_GUI_SCALE), x + (width * ClickGuiModule.CLICK_GUI_SCALE), y + (ClickGuiModule.CLICK_GUI_SCALE * height) + fheight * categoryAnimation.getFactor());
-            }
+         if (this.searchButton != null) {
+            this.searchButton
+               .render(
+                  context,
+                  this.x + ClickGuiModule.CLICK_GUI_SCALE,
+                  this.y + this.height * ClickGuiModule.CLICK_GUI_SCALE + 4.0F * ClickGuiModule.CLICK_GUI_SCALE,
+                  mouseX,
+                  mouseY,
+                  delta
+               );
+         }
 
-            int fillColor = ClickGuiModule.getInstance().fixTransparency(0x77000000);
-            fill(context, x, y + (height * ClickGuiModule.CLICK_GUI_SCALE), (width * ClickGuiModule.CLICK_GUI_SCALE), fheight, fillColor);
+         this.off = y1 + this.height * ClickGuiModule.CLICK_GUI_SCALE + ClickGuiModule.CLICK_GUI_SCALE;
+         this.inner = this.off;
 
-            if (ClickGuiModule.getInstance().getBlur() && ClickGuiModule.getInstance().getScaleFactor() == 1.0f)
-            {
-                mc.options.menuBackgroundBlurriness().set(7);
-                mc.gameRenderer.processBlurEffect(delta);
-                mc.getMainRenderTarget().bindWrite(false);
-                mc.options.menuBackgroundBlurriness().set(5);
-            }
+         for (ModuleButton moduleButtonx : this.moduleButtons) {
+            moduleButtonx.render(context, this.x + ClickGuiModule.CLICK_GUI_SCALE, this.inner + ClickGuiModule.CLICK_GUI_SCALE, mouseX, mouseY, delta);
+            this.off = this.off + (float)((moduleButtonx.getHeight() + ClickGuiModule.CLICK_GUI_SCALE) * this.categoryAnimation.getFactor());
+            this.inner = this.inner + (moduleButtonx.getHeight() + ClickGuiModule.CLICK_GUI_SCALE);
+         }
 
-            if (searchButton != null)
-            {
-                searchButton.render(context, x + ClickGuiModule.CLICK_GUI_SCALE,
-                        y + (height * ClickGuiModule.CLICK_GUI_SCALE) + (4.0f * ClickGuiModule.CLICK_GUI_SCALE),
-                        mouseX, mouseY, delta);
-            }
+         if (canScissor) {
+            this.disableScissor();
+         }
+      }
 
-            off = y1 + (height * ClickGuiModule.CLICK_GUI_SCALE) + ClickGuiModule.CLICK_GUI_SCALE;
-            inner = off;
-            for (ModuleButton moduleButton : moduleButtons)
-            {
-                moduleButton.render(context, x + ClickGuiModule.CLICK_GUI_SCALE, inner + ClickGuiModule.CLICK_GUI_SCALE, mouseX, mouseY, delta);
-                off += (float) ((moduleButton.getHeight() + ClickGuiModule.CLICK_GUI_SCALE) * categoryAnimation.getFactor());
-                inner += moduleButton.getHeight() + ClickGuiModule.CLICK_GUI_SCALE;
-            }
+      this.px = ClickGuiScreen.MOUSE_X;
+      this.py = ClickGuiScreen.MOUSE_Y;
+   }
 
-            if (canScissor)
-            {
-                disableScissor();
-            }
-        }
-        // update previous position
-        px = ClickGuiScreen.MOUSE_X;
-        py = ClickGuiScreen.MOUSE_Y;
-    }
+   @Override
+   public void mouseClicked(double mouseX, double mouseY, int mouseButton) {
+      super.mouseClicked(mouseX, mouseY, mouseButton);
+      if (mouseButton == 1 && this.isWithin(mouseX, mouseY)) {
+         this.open = !this.open;
+         this.categoryAnimation.setState(this.open);
+         if (ClickGuiModule.getInstance().getSounds()) {
+            Managers.SOUND.playSound(SoundManager.GUI_CLICK);
+         }
+      }
 
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param mouseButton
-     */
-    @Override
-    public void mouseClicked(double mouseX, double mouseY, int mouseButton)
-    {
-        super.mouseClicked(mouseX, mouseY, mouseButton);
-        if (mouseButton == GLFW.GLFW_MOUSE_BUTTON_RIGHT && isWithin(mouseX, mouseY))
-        {
-            open = !open;
-            categoryAnimation.setState(open);
+      if (this.isOpen()) {
+         for (ModuleButton button : this.moduleButtons) {
+            button.mouseClicked(mouseX, mouseY, mouseButton);
+         }
+      }
 
-            if (ClickGuiModule.getInstance().getSounds())
-            {
-                Managers.SOUND.playSound(SoundManager.GUI_CLICK);
-            }
-        }
-        if (isOpen())
-        {
-            for (ModuleButton button : moduleButtons)
-            {
-                button.mouseClicked(mouseX, mouseY, mouseButton);
-            }
-        }
-        if (searchButton != null)
-        {
-            searchButton.mouseClicked(mouseX, mouseY, mouseButton);
-        }
-    }
+      if (this.searchButton != null) {
+         this.searchButton.mouseClicked(mouseX, mouseY, mouseButton);
+      }
+   }
 
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param mouseButton
-     */
-    @Override
-    public void mouseReleased(double mouseX, double mouseY, int mouseButton)
-    {
-        super.mouseReleased(mouseX, mouseY, mouseButton);
-        drag = false;
-        if (isOpen())
-        {
-            for (ModuleButton button : moduleButtons)
-            {
-                button.mouseReleased(mouseX, mouseY, mouseButton);
-            }
-        }
-        if (searchButton != null)
-        {
-            searchButton.mouseReleased(mouseX, mouseY, mouseButton);
-        }
-    }
+   @Override
+   public void mouseReleased(double mouseX, double mouseY, int mouseButton) {
+      super.mouseReleased(mouseX, mouseY, mouseButton);
+      this.drag = false;
+      if (this.isOpen()) {
+         for (ModuleButton button : this.moduleButtons) {
+            button.mouseReleased(mouseX, mouseY, mouseButton);
+         }
+      }
 
-    /**
-     * @param keyCode
-     * @param scanCode
-     * @param modifiers
-     */
-    @Override
-    public void keyPressed(int keyCode, int scanCode, int modifiers)
-    {
-        super.keyPressed(keyCode, scanCode, modifiers);
-        if (isOpen())
-        {
-            for (ModuleButton button : moduleButtons)
-            {
-                button.keyPressed(keyCode, scanCode, modifiers);
-            }
-        }
-        if (searchButton != null)
-        {
-            searchButton.keyPressed(keyCode, scanCode, modifiers);
-        }
-    }
+      if (this.searchButton != null) {
+         this.searchButton.mouseReleased(mouseX, mouseY, mouseButton);
+      }
+   }
 
-    @Override
-    public void charTyped(char character, int modifiers)
-    {
-        super.charTyped(character, modifiers);
-        if (isOpen())
-        {
-            for (ModuleButton button : moduleButtons)
-            {
-                button.charTyped(character, modifiers);
-            }
-        }
-        if (searchButton != null)
-        {
-            searchButton.charTyped(character, modifiers);
-        }
-    }
+   @Override
+   public void keyPressed(int keyCode, int scanCode, int modifiers) {
+      super.keyPressed(keyCode, scanCode, modifiers);
+      if (this.isOpen()) {
+         for (ModuleButton button : this.moduleButtons) {
+            button.keyPressed(keyCode, scanCode, modifiers);
+         }
+      }
 
-    @Override
-    public JsonObject toJson()
-    {
-        JsonObject obj = new JsonObject();
-        obj.addProperty("category", category.name());
-        obj.addProperty("x", getX());
-        obj.addProperty("y", getY());
-        obj.addProperty("open", isOpen());
-        return obj;
-    }
+      if (this.searchButton != null) {
+         this.searchButton.keyPressed(keyCode, scanCode, modifiers);
+      }
+   }
 
-    @Override
-    public CategoryFrame fromJson(JsonObject jsonObj)
-    {
-        if (jsonObj.has("x") && jsonObj.has("y") && jsonObj.has("open"))
-        {
-            JsonElement xElement = jsonObj.get("x");
-            JsonElement yElement = jsonObj.get("y");
-            JsonElement openElement = jsonObj.get("open");
-            setPos(xElement.getAsFloat(), yElement.getAsFloat());
-            setOpen(openElement.getAsBoolean());
-        }
-        return null;
-    }
+   @Override
+   public void charTyped(char character, int modifiers) {
+      super.charTyped(character, modifiers);
+      if (this.isOpen()) {
+         for (ModuleButton button : this.moduleButtons) {
+            button.charTyped(character, modifiers);
+         }
+      }
 
-    /**
-     * @param mx
-     * @param my
-     * @return
-     */
-    public boolean isWithinTotal(float mx, float my)
-    {
-        return isMouseOver(mx, my, x, y, width * ClickGuiModule.CLICK_GUI_SCALE, getTotalHeight());
-    }
+      if (this.searchButton != null) {
+         this.searchButton.charTyped(character, modifiers);
+      }
+   }
 
-    /**
-     * Update global offset
-     *
-     * @param in The offset
-     */
-    public void offset(float in)
-    {
-        off += in;
-        inner += in;
-    }
+   @Override
+   public JsonObject toJson() {
+      JsonObject obj = new JsonObject();
+      obj.addProperty("category", this.category.name());
+      obj.addProperty("x", this.getX());
+      obj.addProperty("y", this.getY());
+      obj.addProperty("open", this.isOpen());
+      return obj;
+   }
 
-    /**
-     * @return
-     */
-    public ModuleCategory getCategory()
-    {
-        return category;
-    }
+   public CategoryFrame fromJson(JsonObject jsonObj) {
+      if (jsonObj.has("x") && jsonObj.has("y") && jsonObj.has("open")) {
+         JsonElement xElement = jsonObj.get("x");
+         JsonElement yElement = jsonObj.get("y");
+         JsonElement openElement = jsonObj.get("open");
+         this.setPos(xElement.getAsFloat(), yElement.getAsFloat());
+         this.setOpen(openElement.getAsBoolean());
+      }
 
-    public boolean isOpen()
-    {
-        return open && categoryAnimation.getFactor() > 0.1f;
-    }
+      return null;
+   }
 
-    public void setOpen(boolean open)
-    {
-        this.open = open;
-        categoryAnimation.setState(open);
-    }
+   public boolean isWithinTotal(float mx, float my) {
+      return this.isMouseOver(mx, my, this.x, this.y, this.width * ClickGuiModule.CLICK_GUI_SCALE, this.getTotalHeight());
+   }
 
-    /**
-     * Gets the total height of the frame
-     *
-     * @return The total height
-     */
-    public float getTotalHeight()
-    {
-        return (height * ClickGuiModule.CLICK_GUI_SCALE) + fheight;
-    }
+   public void offset(float in) {
+      this.off += in;
+      this.inner += in;
+   }
 
-    /**
-     * @return
-     */
-    public List<ModuleButton> getModuleButtons()
-    {
-        return moduleButtons;
-    }
+   public ModuleCategory getCategory() {
+      return this.category;
+   }
 
-    public void setDragging(boolean drag)
-    {
-        this.drag = drag;
-    }
+   public boolean isOpen() {
+      return this.open && this.categoryAnimation.getFactor() > 0.1F;
+   }
 
-    public boolean isDragging()
-    {
-        return drag;
-    }
+   public void setOpen(boolean open) {
+      this.open = open;
+      this.categoryAnimation.setState(open);
+   }
 
-    public SearchButton getSearchButton()
-    {
-        return searchButton;
-    }
+   public float getTotalHeight() {
+      return this.height * ClickGuiModule.CLICK_GUI_SCALE + this.fheight;
+   }
+
+   public List<ModuleButton> getModuleButtons() {
+      return this.moduleButtons;
+   }
+
+   public void setDragging(boolean drag) {
+      this.drag = drag;
+   }
+
+   public boolean isDragging() {
+      return this.drag;
+   }
+
+   public SearchButton getSearchButton() {
+      return this.searchButton;
+   }
 }

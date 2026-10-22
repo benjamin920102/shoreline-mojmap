@@ -9,14 +9,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(Inventory.class)
-public class MixinPlayerInventory
-{
-
-    @Inject(method = "setItem", at = @At(value = "HEAD"))
-    private void hookSetStack(int slot, ItemStack stack, CallbackInfo ci)
-    {
-        SetStackEvent setStackEvent = new SetStackEvent(slot, stack);
-        EventBus.INSTANCE.dispatch(setStackEvent);
-    }
+@Mixin({Inventory.class})
+public class MixinPlayerInventory {
+   @Inject(
+      method = {"setItem(ILnet/minecraft/world/item/ItemStack;)V"},
+      at = {@At("HEAD")}
+   )
+   private void hookSetStack(int slot, ItemStack stack, CallbackInfo ci) {
+      SetStackEvent setStackEvent = new SetStackEvent(slot, stack);
+      EventBus.INSTANCE.dispatch(setStackEvent);
+   }
 }

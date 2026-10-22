@@ -6,48 +6,37 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import java.util.concurrent.CompletableFuture;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.shoreline.client.util.Globals;
 
-import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
+public class PlayerArgumentType implements ArgumentType<String>, Globals {
+   public static PlayerArgumentType player() {
+      return new PlayerArgumentType();
+   }
 
-public class PlayerArgumentType implements ArgumentType<String>, Globals
-{
+   public static String getPlayer(CommandContext<?> context, String name) {
+      return (String)context.getArgument(name, String.class);
+   }
 
-    public static PlayerArgumentType player()
-    {
-        return new PlayerArgumentType();
-    }
+   public String parse(StringReader reader) throws CommandSyntaxException {
+      return reader.readString();
+   }
 
-    public static String getPlayer(final CommandContext<?> context, final String name)
-    {
-        return context.getArgument(name, String.class);
-    }
+   public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
+      String[] literal = context.getInput().split(" ");
 
-    @Override
-    public String parse(StringReader reader) throws CommandSyntaxException
-    {
-        return reader.readString();
-    }
+      for (PlayerInfo playerListEntry : mc.player.connection.getOnlinePlayers()) {
+         String playerName = playerListEntry.getProfile().getName();
 
-    @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder)
-    {
-        String[] literal = context.getInput().split(" ");
-        Collection<PlayerInfo> playerListEntries = mc.player.connection.getOnlinePlayers();
-        for (PlayerInfo playerListEntry : playerListEntries)
-        {
-            String playerName = playerListEntry.getProfile().getName();
-            for (String string : literal)
-            {
-                if (string.isBlank() || playerName.toLowerCase().startsWith(string.toLowerCase()))
-                {
-                    builder.suggest(playerName);
-                    break;
-                }
+         for (String string : literal) {
+            if (string.isBlank() || playerName.toLowerCase().startsWith(string.toLowerCase())) {
+               builder.suggest(playerName);
+               break;
             }
-        }
-        return builder.buildFuture();
-    }
+         }
+      }
+
+      return builder.buildFuture();
+   }
 }

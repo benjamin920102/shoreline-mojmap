@@ -7,10 +7,8 @@ import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(Connection.class)
-public interface AccessorClientConnection
-{
-
-    @Invoker("doSendPacket")
-    void hookSendInternal(Packet<?> packet, @Nullable PacketSendListener callbacks, boolean flush);
+@Mixin({Connection.class})
+public interface AccessorClientConnection {
+   @Invoker("doSendPacket")
+   void hookSendInternal(Packet<?> var1, @Nullable PacketSendListener var2, boolean var3);
 }

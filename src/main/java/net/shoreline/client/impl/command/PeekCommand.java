@@ -6,20 +6,14 @@ import net.minecraft.world.item.ItemStack;
 import net.shoreline.client.api.command.Command;
 
 public class PeekCommand extends Command {
+   public PeekCommand() {
+      super("Peek", "Shows the contents of held shulkers", literal("peek"));
+   }
 
-    public PeekCommand()
-    {
-        super("Peek", "Shows the contents of held shulkers", literal("peek"));
-    }
+   @Override
+   public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
+   }
 
-    @Override
-    public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder)
-    {
-
-    }
-
-    public void displayShulkerInventory(ItemStack stack)
-    {
-
-    }
+   public void displayShulkerInventory(ItemStack stack) {
+   }
 }

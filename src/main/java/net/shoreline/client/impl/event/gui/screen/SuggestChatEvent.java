@@ -4,40 +4,32 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.shoreline.eventbus.event.Event;
 
-public class SuggestChatEvent extends Event
-{
+public class SuggestChatEvent extends Event {
+   private CommandDispatcher dispatcher;
+   private SharedSuggestionProvider source;
+   private String prefix;
 
-    private CommandDispatcher dispatcher;
-    private SharedSuggestionProvider source;
-    private String prefix;
+   public String getPrefix() {
+      return this.prefix;
+   }
 
-    public String getPrefix()
-    {
-        return prefix;
-    }
+   public void setPrefix(String prefix) {
+      this.prefix = prefix;
+   }
 
-    public void setPrefix(String prefix)
-    {
-        this.prefix = prefix;
-    }
+   public SharedSuggestionProvider getSource() {
+      return this.source;
+   }
 
-    public SharedSuggestionProvider getSource()
-    {
-        return source;
-    }
+   public void setSource(SharedSuggestionProvider source) {
+      this.source = source;
+   }
 
-    public void setSource(SharedSuggestionProvider source)
-    {
-        this.source = source;
-    }
+   public void setDispatcher(CommandDispatcher dispatcher) {
+      this.dispatcher = dispatcher;
+   }
 
-    public void setDispatcher(CommandDispatcher dispatcher)
-    {
-        this.dispatcher = dispatcher;
-    }
-
-    public CommandDispatcher getDispatcher()
-    {
-        return dispatcher;
-    }
+   public CommandDispatcher getDispatcher() {
+      return this.dispatcher;
+   }
 }

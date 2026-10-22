@@ -8,36 +8,20 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.network.PacketEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class XCarryModule extends ToggleModule
-{
-    //
-    Config<Boolean> forceCancelConfig = register(new BooleanConfig("ForceCancel", "Cancels all close window packets", false));
+public class XCarryModule extends ToggleModule {
+   Config<Boolean> forceCancelConfig = this.register(new BooleanConfig("ForceCancel", "Cancels all close window packets", false));
 
-    /**
-     *
-     */
-    public XCarryModule()
-    {
-        super("XCarry", "Allow player to carry items in the crafting slots",
-                ModuleCategory.MISCELLANEOUS);
-    }
+   public XCarryModule() {
+      super("XCarry", "Allow player to carry items in the crafting slots", ModuleCategory.MISCELLANEOUS);
+   }
 
-    @EventListener
-    public void onPacketOutbound(PacketEvent.Outbound event)
-    {
-        if (mc.player == null)
-        {
-            return;
-        }
-        if (event.getPacket() instanceof ServerboundContainerClosePacket packet
-                && (packet.getContainerId() == mc.player.inventoryMenu.containerId
-                || forceCancelConfig.getValue()))
-        {
+   @EventListener
+   public void onPacketOutbound(PacketEvent.Outbound event) {
+      if (mc.player != null) {
+         if (event.getPacket() instanceof ServerboundContainerClosePacket packet
+            && (packet.getContainerId() == mc.player.inventoryMenu.containerId || this.forceCancelConfig.getValue())) {
             event.cancel();
-        }
-    }
+         }
+      }
+   }
 }

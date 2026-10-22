@@ -5,27 +5,22 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.shoreline.eventbus.event.Event;
 
-public class RenderBlockEntityEvent extends Event
-{
-    private final BlockEntity blockEntity;
+public class RenderBlockEntityEvent extends Event {
+   private final BlockEntity blockEntity;
 
-    public RenderBlockEntityEvent(BlockEntity blockEntity)
-    {
-        this.blockEntity = blockEntity;
-    }
+   public RenderBlockEntityEvent(BlockEntity blockEntity) {
+      this.blockEntity = blockEntity;
+   }
 
-    public BlockPos getPos()
-    {
-        return blockEntity.getBlockPos();
-    }
+   public BlockPos getPos() {
+      return this.blockEntity.getBlockPos();
+   }
 
-    public BlockEntity getBlockEntity()
-    {
-        return blockEntity;
-    }
+   public BlockEntity getBlockEntity() {
+      return this.blockEntity;
+   }
 
-    public BlockState getCachedState()
-    {
-        return blockEntity.getBlockState();
-    }
+   public BlockState getCachedState() {
+      return this.blockEntity.getBlockState();
+   }
 }

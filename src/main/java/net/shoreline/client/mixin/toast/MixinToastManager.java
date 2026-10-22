@@ -9,22 +9,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ToastComponent.class)
-public class MixinToastManager
-{
-
-    /**
-     * @param context
-     * @param ci
-     */
-    @Inject(method = "render", at = @At(value = "HEAD"), cancellable = true)
-    private void hookDraw(GuiGraphics context, CallbackInfo ci)
-    {
-        RenderToastEvent renderToastEvent = new RenderToastEvent();
-        EventBus.INSTANCE.dispatch(renderToastEvent);
-        if (renderToastEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+@Mixin({ToastComponent.class})
+public class MixinToastManager {
+   @Inject(
+      method = {"render(Lnet/minecraft/client/gui/GuiGraphics;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookDraw(GuiGraphics context, CallbackInfo ci) {
+      RenderToastEvent renderToastEvent = new RenderToastEvent();
+      EventBus.INSTANCE.dispatch(renderToastEvent);
+      if (renderToastEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 }

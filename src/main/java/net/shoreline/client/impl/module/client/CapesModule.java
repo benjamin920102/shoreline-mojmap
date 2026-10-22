@@ -12,107 +12,93 @@ import net.shoreline.client.impl.event.network.CapesEvent;
 import net.shoreline.client.impl.event.network.GameJoinEvent;
 import net.shoreline.client.mixin.accessor.AccessorGameOptions;
 import net.shoreline.eventbus.annotation.EventListener;
-import net.shoreline.eventbus.event.StageEvent;
 
-public final class CapesModule extends ToggleModule
-{
-    public static CapesModule instance;
+public final class CapesModule extends ToggleModule {
+   public static CapesModule instance;
+   public Config<CapesModule.Capes> clientConfig = this.register(
+      new EnumConfig<>("Client", "Shows client capes", CapesModule.Capes.OFF, CapesModule.Capes.values())
+   );
+   Config<Boolean> optifineConfig = this.register(new BooleanConfig("Optifine", "Shows optifine capes", true));
+   Config<CapesModule.CapeType> capeTypeConfig = this.register(
+      new EnumConfig<>("Type", "Cape version to display", CapesModule.CapeType.RELEASE, CapesModule.CapeType.values())
+   );
+   private boolean capesEnabled;
 
-    public Config<Capes> clientConfig = register(new EnumConfig<>("Client", "Shows client capes", Capes.OFF, Capes.values()));
-    Config<Boolean> optifineConfig = register(new BooleanConfig("Optifine", "Shows optifine capes", true));
-    Config<CapeType> capeTypeConfig = register(new EnumConfig<>("Type", "Cape version to display", CapeType.RELEASE, CapeType.values()));
+   public CapesModule() {
+      super("Capes", "Shows player capes", ModuleCategory.CLIENT);
+      this.enable();
+      instance = this;
+   }
 
-    private boolean capesEnabled;
+   @Override
+   public void onEnable() {
+      if (mc.options != null) {
+         this.capesEnabled = ((AccessorGameOptions)mc.options).getPlayerModelParts().contains(PlayerModelPart.CAPE);
+         mc.options.toggleModelPart(PlayerModelPart.CAPE, true);
+      }
+   }
 
-    public CapesModule()
-    {
-        super("Capes", "Shows player capes", ModuleCategory.CLIENT);
-        enable();
-        instance = this;
-    }
+   @Override
+   public void onDisable() {
+      if (mc.options != null) {
+         mc.options.toggleModelPart(PlayerModelPart.CAPE, this.capesEnabled);
+      }
+   }
 
-    @Override
-    public void onEnable()
-    {
-        if (mc.options == null)
-        {
-            return;
-        }
-        capesEnabled = ((AccessorGameOptions) mc.options).getPlayerModelParts().contains(PlayerModelPart.CAPE);
-        mc.options.toggleModelPart(PlayerModelPart.CAPE, true);
-    }
+   @EventListener
+   public void onGameJoinEvent(GameJoinEvent event) {
+      this.onEnable();
+   }
 
-    @Override
-    public void onDisable()
-    {
-        if (mc.options == null)
-        {
-            return;
-        }
-        mc.options.toggleModelPart(PlayerModelPart.CAPE, capesEnabled);
-    }
+   @EventListener
+   public void onCapes(CapesEvent event) {
+      if (this.clientConfig.getValue() != CapesModule.Capes.OFF) {
+         if (this.optifineConfig.getValue() || this.clientConfig.getValue() != CapesModule.Capes.OFF) {
+            event.cancel();
+            event.setShowOptifine(this.optifineConfig.getValue());
+            String capePath = this.getCapePath();
+            event.setTexture(ResourceLocation.fromNamespaceAndPath("shoreline", capePath));
+         }
+      }
+   }
 
-    @EventListener
-    public void onGameJoinEvent(GameJoinEvent event)
-    {
-        onEnable();
-    }
+   @EventListener
+   public void onConfigUpdate(ConfigUpdateEvent event) {
+   }
 
-    @EventListener
-    public void onCapes(CapesEvent event)
-    {
-        if (clientConfig.getValue() == Capes.OFF)
-        {
-            return;
-        }
+   private String getCapePath() {
+      StringBuilder capePath = new StringBuilder("cape");
+      switch ((CapesModule.Capes)this.clientConfig.getValue()) {
+         case WHITE:
+            capePath.append("/white_bg");
+            break;
+         case BLACK:
+            capePath.append("/black_bg");
+      }
 
-        if (!optifineConfig.getValue() && clientConfig.getValue() == Capes.OFF)
-        {
-            return;
-        }
-        event.cancel();
-        event.setShowOptifine(optifineConfig.getValue());
+      switch ((CapesModule.CapeType)this.capeTypeConfig.getValue()) {
+         case RELEASE:
+            capePath.append("/white.png");
+            break;
+         case BETA:
+            capePath.append("/blue.png");
+            break;
+         case DEV:
+            capePath.append("/red.png");
+      }
 
-        String capePath = getCapePath();
-        event.setTexture(ResourceLocation.fromNamespaceAndPath("shoreline", capePath));
-    }
+      return capePath.toString();
+   }
 
-    @EventListener
-    public void onConfigUpdate(ConfigUpdateEvent event)
-    {
-    }
+   public static enum CapeType {
+      RELEASE,
+      BETA,
+      DEV;
+   }
 
-    private String getCapePath()
-    {
-        StringBuilder capePath = new StringBuilder("cape");
-
-        switch (clientConfig.getValue())
-        {
-            case WHITE -> capePath.append("/white_bg");
-            case BLACK -> capePath.append("/black_bg");
-        }
-
-        switch (capeTypeConfig.getValue())
-        {
-            case RELEASE -> capePath.append("/white.png");
-            case BETA -> capePath.append("/blue.png");
-            case DEV -> capePath.append("/red.png");
-        }
-
-        return capePath.toString();
-    }
-
-    public enum Capes
-    {
-        WHITE,
-        BLACK,
-        OFF
-    }
-
-    public enum CapeType
-    {
-        RELEASE,
-        BETA,
-        DEV
-    }
+   public static enum Capes {
+      WHITE,
+      BLACK,
+      OFF;
+   }
 }

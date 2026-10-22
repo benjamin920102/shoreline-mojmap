@@ -1,5 +1,8 @@
 package net.shoreline.client.impl.gui.account;
 
+import java.awt.Color;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import net.minecraft.client.User;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -14,107 +17,82 @@ import net.shoreline.client.api.account.type.impl.MicrosoftAccount;
 import net.shoreline.client.impl.manager.client.AccountManager;
 import net.shoreline.client.init.Managers;
 
-import java.awt.*;
-import java.io.IOException;
-import java.net.URISyntaxException;
+public final class AccountAddAccountScreen extends Screen {
+   private final Screen parent;
+   private EditBox email;
+   private EditBox password;
 
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
+   public AccountAddAccountScreen(Screen parent) {
+      super(Component.nullToEmpty("Add or Create an Alt Account"));
+      this.parent = parent;
+   }
 
-/**
- * @author xgraza
- * @since 03/28/24
- */
-public final class AccountAddAccountScreen extends Screen
-{
-    private final Screen parent;
-    private EditBox email, password;
-
-    public AccountAddAccountScreen(final Screen parent)
-    {
-        super(Component.nullToEmpty("Add or Create an Alt Account"));
-        this.parent = parent;
-    }
-
-    @Override
-    protected void init()
-    {
-        clearWidgets();
-        addRenderableWidget(email = new EditBox(minecraft.font, width / 2 - 75, height / 2 - 30, 150, 20, Component.nullToEmpty("")));
-        email.setHint(Component.nullToEmpty("Email or Username..."));
-        addRenderableWidget(password = new EditBox(minecraft.font, width / 2 - 75, height / 2 - 5, 150, 20, Component.nullToEmpty("")));
-        password.setHint(Component.nullToEmpty("Password (Optional)"));
-
-        addRenderableWidget(Button.builder(Component.nullToEmpty("Add"), (action) ->
-        {
-            final String accountEmail = email.getValue();
-            if (accountEmail.length() >= 3)
-            {
-                final String accountPassword = password.getValue();
-                MinecraftAccount account;
-                if (!accountPassword.isEmpty())
-                {
-                    account = new MicrosoftAccount(accountEmail, accountPassword);
-                }
-                else
-                {
-                    account = new CrackedAccount(accountEmail);
-                }
-
-                // Add account to alt manager & display the parent screen
-                Managers.ACCOUNT.register(account);
-                minecraft.setScreen(parent);
+   @Override
+   protected void init() {
+      this.clearWidgets();
+      this.addRenderableWidget(this.email = new EditBox(this.minecraft.font, this.width / 2 - 75, this.height / 2 - 30, 150, 20, Component.nullToEmpty("")));
+      this.email.setHint(Component.nullToEmpty("Email or Username..."));
+      this.addRenderableWidget(this.password = new EditBox(this.minecraft.font, this.width / 2 - 75, this.height / 2 - 5, 150, 20, Component.nullToEmpty("")));
+      this.password.setHint(Component.nullToEmpty("Password (Optional)"));
+      this.addRenderableWidget(Button.builder(Component.nullToEmpty("Add"), action -> {
+         String accountEmail = this.email.getValue();
+         if (accountEmail.length() >= 3) {
+            String accountPassword = this.password.getValue();
+            MinecraftAccount account;
+            if (!accountPassword.isEmpty()) {
+               account = new MicrosoftAccount(accountEmail, accountPassword);
+            } else {
+               account = new CrackedAccount(accountEmail);
             }
-        }).bounds(width / 2 - 72, height / 2 + 20, 145, 20).build());
-        addRenderableWidget(Button.builder(Component.nullToEmpty("Browser..."), (action) ->
-        {
-            try
-            {
-                AccountManager.MSA_AUTHENTICATOR.loginWithBrowser((token) ->
-                        Shoreline.EXECUTOR.execute(() ->
-                        {
-                            final MicrosoftAccount account = new MicrosoftAccount(token);
-                            final User session = account.login();
-                            if (session != null)
-                            {
-                                Managers.ACCOUNT.setSession(session);
-                                Managers.ACCOUNT.register(account);
-                                minecraft.setScreen(parent);
-                            }
-                            else
-                            {
-                                AccountManager.MSA_AUTHENTICATOR.setLoginStage("Could not login to account");
-                            }
-                        }));
-            }
-            catch (IOException | URISyntaxException | MSAAuthException e)
-            {
-                e.printStackTrace();
-            }
-        }).bounds(width / 2 - 72, height / 2 + 20 + 22, 145, 20).build());
-        addRenderableWidget(Button.builder(Component.nullToEmpty("Go Back"), (action) -> minecraft.setScreen(parent))
-                .bounds(width / 2 - 72, height / 2 + 20 + (22 * 2), 145, 20).build());
-    }
 
-    @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta)
-    {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawString(minecraft.font, "*",
-                email.getX() - 10,
-                email.getY() + (email.getHeight() / 2) - (minecraft.font.lineHeight / 2),
-                (email.getValue().length() >= 3 ? Color.green : Color.red).getRGB());
-        context.drawCenteredString(minecraft.font,
-                "Add an Account", width / 2, height / 2 - 120, -1);
-    }
+            Managers.ACCOUNT.register(account);
+            this.minecraft.setScreen(this.parent);
+         }
+      }).bounds(this.width / 2 - 72, this.height / 2 + 20, 145, 20).build());
+      this.addRenderableWidget(Button.builder(Component.nullToEmpty("Browser..."), action -> {
+         try {
+            AccountManager.MSA_AUTHENTICATOR.loginWithBrowser(token -> Shoreline.EXECUTOR.execute(() -> {
+               MicrosoftAccount account = new MicrosoftAccount(token);
+               User session = account.login();
+               if (session != null) {
+                  Managers.ACCOUNT.setSession(session);
+                  Managers.ACCOUNT.register(account);
+                  this.minecraft.setScreen(this.parent);
+               } else {
+                  AccountManager.MSA_AUTHENTICATOR.setLoginStage("Could not login to account");
+               }
+            }));
+         } catch (URISyntaxException | MSAAuthException | IOException var3) {
+            var3.printStackTrace();
+         }
+      }).bounds(this.width / 2 - 72, this.height / 2 + 20 + 22, 145, 20).build());
+      this.addRenderableWidget(
+         Button.builder(Component.nullToEmpty("Go Back"), action -> this.minecraft.setScreen(this.parent))
+            .bounds(this.width / 2 - 72, this.height / 2 + 20 + 44, 145, 20)
+            .build()
+      );
+   }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers)
-    {
-        if (keyCode == GLFW_KEY_ESCAPE)
-        {
-            minecraft.setScreen(parent);
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
+   @Override
+   public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+      super.render(context, mouseX, mouseY, delta);
+      context.drawString(
+         this.minecraft.font,
+         "*",
+         this.email.getX() - 10,
+         this.email.getY() + this.email.getHeight() / 2 - 9 / 2,
+         (this.email.getValue().length() >= 3 ? Color.green : Color.red).getRGB()
+      );
+      context.drawCenteredString(this.minecraft.font, "Add an Account", this.width / 2, this.height / 2 - 120, -1);
+   }
+
+   @Override
+   public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+      if (keyCode == 256) {
+         this.minecraft.setScreen(this.parent);
+         return true;
+      } else {
+         return super.keyPressed(keyCode, scanCode, modifiers);
+      }
+   }
 }

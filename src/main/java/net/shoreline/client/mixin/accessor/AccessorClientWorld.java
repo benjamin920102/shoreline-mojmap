@@ -7,32 +7,11 @@ import net.minecraft.sounds.SoundSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(ClientLevel.class)
-public interface AccessorClientWorld
-{
-    /**
-     * @param x
-     * @param y
-     * @param z
-     * @param event
-     * @param category
-     * @param volume
-     * @param pitch
-     * @param useDistance
-     * @param seed
-     */
-    @Invoker("playSound")
-    void hookPlaySound(double x, double y, double z, SoundEvent event,
-                       SoundSource category, float volume, float pitch,
-                       boolean useDistance, long seed);
+@Mixin({ClientLevel.class})
+public interface AccessorClientWorld {
+   @Invoker("playSound")
+   void hookPlaySound(double var1, double var3, double var5, SoundEvent var7, SoundSource var8, float var9, float var10, boolean var11, long var12);
 
-    /**
-     * @return
-     */
-    @Invoker("getBlockStatePredictionHandler")
-    BlockStatePredictionHandler hookGetPendingUpdateManager();
+   @Invoker("getBlockStatePredictionHandler")
+   BlockStatePredictionHandler hookGetPendingUpdateManager();
 }

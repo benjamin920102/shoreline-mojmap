@@ -2,6 +2,9 @@ package net.shoreline.client.impl.manager.player;
 
 import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundBundlePacket;
@@ -29,381 +32,276 @@ import net.shoreline.client.util.math.timer.Timer;
 import net.shoreline.eventbus.EventBus;
 import net.shoreline.eventbus.annotation.EventListener;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+public class InventoryManager implements Globals {
+   private final List<InventoryManager.PreSwapData> swapData = new CopyOnWriteArrayList<>();
+   private int slot;
 
-/**
- * @author xgraza & linus
- * @since 1.0
- */
-public class InventoryManager implements Globals
-{
-    private final List<PreSwapData> swapData = new CopyOnWriteArrayList<>();
+   public InventoryManager() {
+      EventBus.INSTANCE.subscribe(this);
+   }
 
-    // The serverside selected hotbar slot.
-    private int slot;
-
-    /**
-     *
-     */
-    public InventoryManager()
-    {
-        EventBus.INSTANCE.subscribe(this);
-    }
-
-    @EventListener
-    public void onPacketOutBound(final PacketEvent.Outbound event)
-    {
-        if (event.getPacket() instanceof ServerboundSetCarriedItemPacket packet)
-        {
-            final int packetSlot = packet.getSlot();
-            if (!Inventory.isHotbarSlot(packetSlot) || slot == packetSlot)
-            {
-                event.setCanceled(true);
-                return;
-            }
-            slot = packetSlot;
-        }
-    }
-
-    @EventListener
-    public void onPacketInbound(final PacketEvent.Inbound event)
-    {
-        if (event.getPacket() instanceof ClientboundSetCarriedItemPacket packet)
-        {
-            slot = packet.getSlot();
-        }
-        
-        if (ReplenishModule.getInstance().isInInventoryScreen() || !AnticheatModule.getInstance().isGrim())
-        {
+   @EventListener
+   public void onPacketOutBound(PacketEvent.Outbound event) {
+      if (event.getPacket() instanceof ServerboundSetCarriedItemPacket packet) {
+         int packetSlot = packet.getSlot();
+         if (!Inventory.isHotbarSlot(packetSlot) || this.slot == packetSlot) {
+            event.setCanceled(true);
             return;
-        }
+         }
 
-        // retarded packets from grim we can ignore
-        if (event.getPacket() instanceof ClientboundBundlePacket packet)
-        {
+         this.slot = packetSlot;
+      }
+   }
+
+   @EventListener
+   public void onPacketInbound(PacketEvent.Inbound event) {
+      if (event.getPacket() instanceof ClientboundSetCarriedItemPacket packet) {
+         this.slot = packet.getSlot();
+      }
+
+      if (!ReplenishModule.getInstance().isInInventoryScreen() && AnticheatModule.getInstance().isGrim()) {
+         if (event.getPacket() instanceof ClientboundBundlePacket packet) {
             List<Packet<?>> allowedBundle = new ArrayList<>();
-            for (Packet<?> packet1 : packet.subPackets())
-            {
-                if (packet1 instanceof ClientboundContainerSetSlotPacket)
-                {
-                    continue;
-                }
-                allowedBundle.add(packet1);
-            }
-            ((AccessorBundlePacket) packet).setIterable(allowedBundle);
-        }
 
-        if (event.getPacket() instanceof ClientboundContainerSetSlotPacket packet)
-        {
+            for (Packet<?> packet1 : packet.subPackets()) {
+               if (!(packet1 instanceof ClientboundContainerSetSlotPacket)) {
+                  allowedBundle.add(packet1);
+               }
+            }
+
+            ((AccessorBundlePacket)packet).setIterable(allowedBundle);
+         }
+
+         if (event.getPacket() instanceof ClientboundContainerSetSlotPacket packet) {
             int slot = packet.getSlot() - 36;
-            if (slot < 0 || slot > 8)
-            {
-                return;
+            if (slot < 0 || slot > 8) {
+               return;
             }
 
-            if (packet.getItem().isEmpty())
-            {
-                return;
+            if (packet.getItem().isEmpty()) {
+               return;
             }
 
-            for (PreSwapData data : swapData)
-            {
-                if (data.getSlot() != slot && data.getStarting() != slot)
-                {
-                    continue;
-                }
-
-                ItemStack preStack = data.getPreHolding(slot);
-                if (!isEqual(preStack, packet.getItem()))
-                {
-                    event.cancel();
-                    break;
-                }
+            for (InventoryManager.PreSwapData data : this.swapData) {
+               if (data.getSlot() == slot || data.getStarting() == slot) {
+                  ItemStack preStack = data.getPreHolding(slot);
+                  if (!this.isEqual(preStack, packet.getItem())) {
+                     event.cancel();
+                     break;
+                  }
+               }
             }
-        }
-    }
+         }
+      }
+   }
 
-    @EventListener
-    public void onItemDesync(ItemDesyncEvent event)
-    {
-        if (isDesynced())
-        {
-            event.cancel();
-            event.setStack(getServerItem());
-        }
-    }
+   @EventListener
+   public void onItemDesync(ItemDesyncEvent event) {
+      if (this.isDesynced()) {
+         event.cancel();
+         event.setStack(this.getServerItem());
+      }
+   }
 
-    @EventListener
-    public void onDeath(EntityDeathEvent event)
-    {
-        if (event.getEntity() == mc.player)
-        {
-            syncToClient();
-        }
-    }
+   @EventListener
+   public void onDeath(EntityDeathEvent event) {
+      if (event.getEntity() == mc.player) {
+         this.syncToClient();
+      }
+   }
 
-    @EventListener
-    public void onTick(TickEvent event)
-    {
-        swapData.removeIf(PreSwapData::isPassedClearTime);
-    }
+   @EventListener
+   public void onTick(TickEvent event) {
+      this.swapData.removeIf(InventoryManager.PreSwapData::isPassedClearTime);
+   }
 
-    /**
-     * Sets the server slot via a {@link ServerboundSetCarriedItemPacket}
-     *
-     * @param barSlot the player hotbar slot 0-8
-     * @apiNote Method will not do anything if the slot provided is already the server slot
-     * @see InventoryManager#setSlotForced(int)
-     */
-    public void setSlot(final int barSlot)
-    {
-        if (slot != barSlot && Inventory.isHotbarSlot(barSlot))
-        {
-            setSlotForced(barSlot);
+   public void setSlot(int barSlot) {
+      if (this.slot != barSlot && Inventory.isHotbarSlot(barSlot)) {
+         this.setSlotForced(barSlot);
+         ItemStack[] hotbarCopy = new ItemStack[9];
 
-            final ItemStack[] hotbarCopy = new ItemStack[9];
-            for (int i = 0; i < 9; i++)
-            {
-                hotbarCopy[i] = mc.player.getInventory().getItem(i);
-            }
-            swapData.add(new PreSwapData(hotbarCopy, slot, barSlot));
-        }
-    }
+         for (int i = 0; i < 9; i++) {
+            hotbarCopy[i] = mc.player.getInventory().getItem(i);
+         }
 
-    /**
-     * Sets the server slot via a click slot
-     *
-     * @param barSlot the player hotbar slot 0-8
-     */
-    public void setSlotAlt(final int barSlot)
-    {
-        if (Inventory.isHotbarSlot(barSlot))
-        {
-            mc.gameMode.handleInventoryMouseClick(mc.player.inventoryMenu.containerId,
-                    barSlot + 36, slot, ClickType.SWAP, mc.player);
-        }
-    }
+         this.swapData.add(new InventoryManager.PreSwapData(hotbarCopy, this.slot, barSlot));
+      }
+   }
 
-    /**
-     * Sets the server & client slot
-     *
-     * @param barSlot the player hotbar slot 0-8
-     * @apiNote Method will not do anything if the slot provided is already the server slot
-     * @see InventoryManager#setSlotForced(int)
-     * @see InventoryManager#setSlot(int)
-     */
-    public void setClientSlot(final int barSlot)
-    {
-        if (mc.player.getInventory().selected != barSlot
-                && Inventory.isHotbarSlot(barSlot))
-        {
-            mc.player.getInventory().selected = barSlot;
-            setSlotForced(barSlot);
-        }
-    }
+   public void setSlotAlt(int barSlot) {
+      if (Inventory.isHotbarSlot(barSlot)) {
+         mc.gameMode.handleInventoryMouseClick(mc.player.inventoryMenu.containerId, barSlot + 36, this.slot, ClickType.SWAP, mc.player);
+      }
+   }
 
-    /**
-     * Sends a {@link ServerboundSetCarriedItemPacket} without any slot checks
-     *
-     * @param barSlot the player hotbar slot 0-8
-     */
-    public void setSlotForced(final int barSlot)
-    {
-        Managers.NETWORK.sendPacket(new ServerboundSetCarriedItemPacket(barSlot));
-    }
+   public void setClientSlot(int barSlot) {
+      if (mc.player.getInventory().selected != barSlot && Inventory.isHotbarSlot(barSlot)) {
+         mc.player.getInventory().selected = barSlot;
+         this.setSlotForced(barSlot);
+      }
+   }
 
-    /**
-     * Syncs the server slot to the client slot
-     */
-    public void syncToClient()
-    {
-        if (isDesynced())
-        {
-            setSlotForced(mc.player.getInventory().selected);
+   public void setSlotForced(int barSlot) {
+      Managers.NETWORK.sendPacket(new ServerboundSetCarriedItemPacket(barSlot));
+   }
 
-            for (PreSwapData swapData : swapData)
-            {
-                swapData.beginClear();
-            }
-        }
-    }
+   public void syncToClient() {
+      if (this.isDesynced()) {
+         this.setSlotForced(mc.player.getInventory().selected);
 
-    public boolean isDesynced()
-    {
-        return mc.player.getInventory().selected != slot;
-    }
+         for (InventoryManager.PreSwapData swapData : this.swapData) {
+            swapData.beginClear();
+         }
+      }
+   }
 
-    //
-    public void closeScreen()
-    {
-        Managers.NETWORK.sendPacket(new ServerboundContainerClosePacket(mc.player.containerMenu.containerId));
-    }
+   public boolean isDesynced() {
+      return mc.player.getInventory().selected != this.slot;
+   }
 
-    /**
-     * @param slot
-     */
-    public int pickupSlot(final int slot)
-    {
-        return click(slot, 0, ClickType.PICKUP);
-    }
+   public void closeScreen() {
+      Managers.NETWORK.sendPacket(new ServerboundContainerClosePacket(mc.player.containerMenu.containerId));
+   }
 
-    public void quickMove(final int slot)
-    {
-        click(slot, 0, ClickType.QUICK_MOVE);
-    }
+   public int pickupSlot(int slot) {
+      return this.click(slot, 0, ClickType.PICKUP);
+   }
 
-    /**
-     * @param slot
-     */
-    public void throwSlot(final int slot)
-    {
-        click(slot, 0, ClickType.THROW);
-    }
+   public void quickMove(int slot) {
+      this.click(slot, 0, ClickType.QUICK_MOVE);
+   }
 
-    public int findEmptySlot()
-    {
-        for (int i = 9; i < 36; i++)
-        {
-            ItemStack stack = mc.player.getInventory().getItem(i);
-            if (stack.isEmpty())
-            {
-                return i;
-            }
-        }
-        return -999; // throw
-    }
+   public void throwSlot(int slot) {
+      this.click(slot, 0, ClickType.THROW);
+   }
 
-    /**
-     * @param slot
-     * @param button
-     * @param type
-     */
-    public int click(int slot, int button, ClickType type)
-    {
-        if (slot < 0)
-        {
-            return -1;
-        }
-        AbstractContainerMenu screenHandler = mc.player.containerMenu;
-        NonNullList<Slot> defaultedList = screenHandler.slots;
-        int i = defaultedList.size();
-        ArrayList<ItemStack> list = Lists.newArrayListWithCapacity(i);
-        for (Slot slot1 : defaultedList)
-        {
+   public int findEmptySlot() {
+      for (int i = 9; i < 36; i++) {
+         ItemStack stack = mc.player.getInventory().getItem(i);
+         if (stack.isEmpty()) {
+            return i;
+         }
+      }
+
+      return -999;
+   }
+
+   public int click(int slot, int button, ClickType type) {
+      if (slot < 0) {
+         return -1;
+      } else {
+         AbstractContainerMenu screenHandler = mc.player.containerMenu;
+         NonNullList<Slot> defaultedList = screenHandler.slots;
+         int i = defaultedList.size();
+         ArrayList<ItemStack> list = Lists.newArrayListWithCapacity(i);
+
+         for (Slot slot1 : defaultedList) {
             list.add(slot1.getItem().copy());
-        }
-        screenHandler.clicked(slot, button, type, mc.player);
-        Int2ObjectOpenHashMap<ItemStack> int2ObjectMap = new Int2ObjectOpenHashMap<>();
-        for (int j = 0; j < i; ++j)
-        {
-            ItemStack itemStack2;
-            ItemStack itemStack = list.get(j);
-            if (ItemStack.matches(itemStack, itemStack2 = defaultedList.get(j).getItem())) continue;
-            int2ObjectMap.put(j, itemStack2.copy());
-        }
-        mc.player.connection.send(new ServerboundContainerClickPacket(screenHandler.containerId, screenHandler.getStateId(), slot, button, type, screenHandler.getCarried().copy(), int2ObjectMap));
-        return screenHandler.getStateId();
-    }
+         }
 
-    public int click2(int slot, int button, ClickType type)
-    {
-        if (slot < 0)
-        {
-            return -1;
-        }
-        AbstractContainerMenu screenHandler = mc.player.containerMenu;
-        NonNullList<Slot> defaultedList = screenHandler.slots;
-        int i = defaultedList.size();
-        ArrayList<ItemStack> list = Lists.newArrayListWithCapacity(i);
-        for (Slot slot1 : defaultedList)
-        {
+         screenHandler.clicked(slot, button, type, mc.player);
+         Int2ObjectOpenHashMap<ItemStack> int2ObjectMap = new Int2ObjectOpenHashMap();
+
+         for (int j = 0; j < i; j++) {
+            ItemStack itemStack = list.get(j);
+            ItemStack itemStack2;
+            if (!ItemStack.matches(itemStack, itemStack2 = defaultedList.get(j).getItem())) {
+               int2ObjectMap.put(j, itemStack2.copy());
+            }
+         }
+
+         mc.player
+            .connection
+            .send(
+               new ServerboundContainerClickPacket(
+                  screenHandler.containerId, screenHandler.getStateId(), slot, button, type, screenHandler.getCarried().copy(), int2ObjectMap
+               )
+            );
+         return screenHandler.getStateId();
+      }
+   }
+
+   public int click2(int slot, int button, ClickType type) {
+      if (slot < 0) {
+         return -1;
+      } else {
+         AbstractContainerMenu screenHandler = mc.player.containerMenu;
+         NonNullList<Slot> defaultedList = screenHandler.slots;
+         int i = defaultedList.size();
+         ArrayList<ItemStack> list = Lists.newArrayListWithCapacity(i);
+
+         for (Slot slot1 : defaultedList) {
             list.add(slot1.getItem().copy());
-        }
-        // screenHandler.onSlotClick(slot, button, type, mc.player);
-        Int2ObjectOpenHashMap<ItemStack> int2ObjectMap = new Int2ObjectOpenHashMap<>();
-        for (int j = 0; j < i; ++j)
-        {
-            ItemStack itemStack2;
+         }
+
+         Int2ObjectOpenHashMap<ItemStack> int2ObjectMap = new Int2ObjectOpenHashMap();
+
+         for (int j = 0; j < i; j++) {
             ItemStack itemStack = list.get(j);
-            if (ItemStack.matches(itemStack, itemStack2 = defaultedList.get(j).getItem())) continue;
-            int2ObjectMap.put(j, itemStack2.copy());
-        }
-        mc.player.connection.send(new ServerboundContainerClickPacket(screenHandler.containerId, screenHandler.getStateId(), slot, button, type, screenHandler.getCarried().copy(), int2ObjectMap));
-        return screenHandler.getStateId();
-    }
+            ItemStack itemStack2;
+            if (!ItemStack.matches(itemStack, itemStack2 = defaultedList.get(j).getItem())) {
+               int2ObjectMap.put(j, itemStack2.copy());
+            }
+         }
 
-    /**
-     * @return
-     */
-    public int getServerSlot()
-    {
-        return slot;
-    }
+         mc.player
+            .connection
+            .send(
+               new ServerboundContainerClickPacket(
+                  screenHandler.containerId, screenHandler.getStateId(), slot, button, type, screenHandler.getCarried().copy(), int2ObjectMap
+               )
+            );
+         return screenHandler.getStateId();
+      }
+   }
 
-    public int getClientSlot()
-    {
-        return mc.player.getInventory().selected;
-    }
+   public int getServerSlot() {
+      return this.slot;
+   }
 
-    /**
-     * @return
-     */
-    public ItemStack getServerItem()
-    {
-        if (mc.player != null && getServerSlot() != -1)
-        {
-            return mc.player.getInventory().getItem(getServerSlot());
-        }
-        return null;
-    }
+   public int getClientSlot() {
+      return mc.player.getInventory().selected;
+   }
 
-    private boolean isEqual(ItemStack stack1, ItemStack stack2)
-    {
-        return stack1.getItem().equals(stack2.getItem()) && stack1.getHoverName().equals(stack2.getHoverName());
-    }
+   public ItemStack getServerItem() {
+      return mc.player != null && this.getServerSlot() != -1 ? mc.player.getInventory().getItem(this.getServerSlot()) : null;
+   }
 
-    public static class PreSwapData
-    {
-        private final ItemStack[] preHotbar;
+   private boolean isEqual(ItemStack stack1, ItemStack stack2) {
+      return stack1.getItem().equals(stack2.getItem()) && stack1.getHoverName().equals(stack2.getHoverName());
+   }
 
-        private final int starting;
-        private final int swapTo;
+   public static class PreSwapData {
+      private final ItemStack[] preHotbar;
+      private final int starting;
+      private final int swapTo;
+      private Timer clearTime;
 
-        private Timer clearTime;
+      public PreSwapData(ItemStack[] preHotbar, int start, int swapTo) {
+         this.preHotbar = preHotbar;
+         this.starting = start;
+         this.swapTo = swapTo;
+      }
 
-        public PreSwapData(ItemStack[] preHotbar, int start, int swapTo)
-        {
-            this.preHotbar = preHotbar;
-            this.starting = start;
-            this.swapTo = swapTo;
-        }
+      public void beginClear() {
+         this.clearTime = new CacheTimer();
+         this.clearTime.reset();
+      }
 
-        public void beginClear()
-        {
-            clearTime = new CacheTimer();
-            clearTime.reset();
-        }
+      public boolean isPassedClearTime() {
+         return this.clearTime != null && this.clearTime.passed(300);
+      }
 
-        public boolean isPassedClearTime()
-        {
-            return clearTime != null && clearTime.passed(300);
-        }
+      public ItemStack getPreHolding(int i) {
+         return this.preHotbar[i];
+      }
 
-        public ItemStack getPreHolding(int i)
-        {
-            return preHotbar[i];
-        }
+      public int getStarting() {
+         return this.starting;
+      }
 
-        public int getStarting()
-        {
-            return starting;
-        }
-
-        public int getSlot()
-        {
-            return swapTo;
-        }
-    }
+      public int getSlot() {
+         return this.swapTo;
+      }
+   }
 }

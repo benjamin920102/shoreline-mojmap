@@ -13,36 +13,23 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(BlockCollisions.class)
-public class MixinBlockCollisionSpliterator implements Globals
-{
-    /**
-     * @param instance
-     * @param blockView
-     * @param blockPos
-     * @param shapeContext
-     * @return
-     */
-    @Redirect(method = "computeNext", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;getCollisionShape(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;"))
-    private VoxelShape hookGetCollisionShape(BlockState instance, BlockGetter blockView,
-                                             BlockPos blockPos, CollisionContext shapeContext)
-    {
-        VoxelShape voxelShape = instance.getCollisionShape(blockView, blockPos, shapeContext);
-        if (blockView != mc.level)
-        {
-            return voxelShape;
-        }
-        BlockCollisionEvent blockCollisionEvent =
-                new BlockCollisionEvent(voxelShape, blockPos, instance);
-        EventBus.INSTANCE.dispatch(blockCollisionEvent);
-        if (blockCollisionEvent.isCanceled())
-        {
-            return blockCollisionEvent.getVoxelShape();
-        }
-        return voxelShape;
-    }
+@Mixin({BlockCollisions.class})
+public class MixinBlockCollisionSpliterator implements Globals {
+   @Redirect(
+      method = {"computeNext()Ljava/lang/Object;"},
+      at = @At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/world/level/block/state/BlockState;getCollisionShape(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;"
+      )
+   )
+   private VoxelShape hookGetCollisionShape(BlockState instance, BlockGetter blockView, BlockPos blockPos, CollisionContext shapeContext) {
+      VoxelShape voxelShape = instance.getCollisionShape(blockView, blockPos, shapeContext);
+      if (blockView != mc.level) {
+         return voxelShape;
+      } else {
+         BlockCollisionEvent blockCollisionEvent = new BlockCollisionEvent(voxelShape, blockPos, instance);
+         EventBus.INSTANCE.dispatch(blockCollisionEvent);
+         return blockCollisionEvent.isCanceled() ? blockCollisionEvent.getVoxelShape() : voxelShape;
+      }
+   }
 }

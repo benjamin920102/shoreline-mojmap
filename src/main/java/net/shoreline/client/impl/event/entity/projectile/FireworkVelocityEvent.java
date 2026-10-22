@@ -4,6 +4,5 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class FireworkVelocityEvent extends Event
-{
+public class FireworkVelocityEvent extends Event {
 }

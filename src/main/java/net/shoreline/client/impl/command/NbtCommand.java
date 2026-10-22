@@ -6,29 +6,22 @@ import net.minecraft.world.item.ItemStack;
 import net.shoreline.client.api.command.Command;
 import net.shoreline.client.util.chat.ChatUtil;
 
-public class NbtCommand extends Command
-{
-    /**
-     *
-     */
-    public NbtCommand()
-    {
-        super("Nbt", "Displays all nbt tags on the held item", literal("nbt"));
-    }
+public class NbtCommand extends Command {
+   public NbtCommand() {
+      super("Nbt", "Displays all nbt tags on the held item", literal("nbt"));
+   }
 
-    @Override
-    public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder)
-    {
-        builder.executes(context ->
-        {
-            ItemStack mainhand = mc.player.getMainHandItem();
-            if (!mainhand.getComponents().isEmpty())
-            {
-                ChatUtil.error("No Nbt tags on this item!");
-                return 0;
-            }
+   @Override
+   public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
+      builder.executes(context -> {
+         ItemStack mainhand = mc.player.getMainHandItem();
+         if (!mainhand.getComponents().isEmpty()) {
+            ChatUtil.error("No Nbt tags on this item!");
+            return 0;
+         } else {
             ChatUtil.clientSendMessage(mainhand.getComponents().toString());
             return 1;
-        });
-    }
+         }
+      });
+   }
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "shoreline",
-  "version": "${version}",
+  "version": "1.0",
   "name": "Shoreline",
   "description": "2b2t/Anarchy Utility Mod",
   "authors": [

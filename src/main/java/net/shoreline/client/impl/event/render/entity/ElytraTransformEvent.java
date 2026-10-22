@@ -5,17 +5,14 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class ElytraTransformEvent extends Event
-{
-    private final Entity entity;
+public class ElytraTransformEvent extends Event {
+   private final Entity entity;
 
-    public ElytraTransformEvent(Entity entity)
-    {
-        this.entity = entity;
-    }
+   public ElytraTransformEvent(Entity entity) {
+      this.entity = entity;
+   }
 
-    public Entity getEntity()
-    {
-        return entity;
-    }
+   public Entity getEntity() {
+      return this.entity;
+   }
 }

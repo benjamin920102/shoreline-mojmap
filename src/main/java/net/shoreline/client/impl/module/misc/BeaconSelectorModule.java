@@ -10,47 +10,29 @@ import net.shoreline.client.impl.event.network.PacketEvent;
 import net.shoreline.client.impl.gui.beacon.BeaconSelectorScreen;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class BeaconSelectorModule extends ToggleModule
-{
-    //
-    private MobEffect primaryEffect;
-    private MobEffect secondaryEffect;
-    //
-    private boolean customBeacon;
+public class BeaconSelectorModule extends ToggleModule {
+   private MobEffect primaryEffect;
+   private MobEffect secondaryEffect;
+   private boolean customBeacon;
 
-    /**
-     *
-     */
-    public BeaconSelectorModule()
-    {
-        super("BeaconSelector", "Allows you to change beacon effects",
-                ModuleCategory.MISCELLANEOUS);
-    }
+   public BeaconSelectorModule() {
+      super("BeaconSelector", "Allows you to change beacon effects", ModuleCategory.MISCELLANEOUS);
+   }
 
-    @EventListener
-    public void onPacketOutbound(PacketEvent.Outbound event)
-    {
-        if (event.getPacket() instanceof ServerboundSetBeaconPacket packet)
-        {
-            // ((AccessorUpdateBeaconC2SPacket) packet).setPrimaryEffect(Optional.ofNullable(primaryEffect));
-            // ((AccessorUpdateBeaconC2SPacket) packet).setSecondaryEffect(Optional.ofNullable(secondaryEffect));
-        }
-    }
+   @EventListener
+   public void onPacketOutbound(PacketEvent.Outbound event) {
+      if (event.getPacket() instanceof ServerboundSetBeaconPacket var2) {
+         ;
+      }
+   }
 
-    @EventListener
-    public void onScreenOpen(ScreenOpenEvent event)
-    {
-        if (event.getScreen() instanceof BeaconScreen screen && !customBeacon)
-        {
-            event.cancel();
-            customBeacon = true;
-            mc.setScreen(new BeaconSelectorScreen(screen.getMenu(),
-                    mc.player.getInventory(), screen.getTitle()));
-            customBeacon = false;
-        }
-    }
+   @EventListener
+   public void onScreenOpen(ScreenOpenEvent event) {
+      if (event.getScreen() instanceof BeaconScreen screen && !this.customBeacon) {
+         event.cancel();
+         this.customBeacon = true;
+         mc.setScreen(new BeaconSelectorScreen(screen.getMenu(), mc.player.getInventory(), screen.getTitle()));
+         this.customBeacon = false;
+      }
+   }
 }

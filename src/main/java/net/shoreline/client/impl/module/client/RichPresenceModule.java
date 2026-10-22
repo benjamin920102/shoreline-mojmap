@@ -1,85 +1,75 @@
 package net.shoreline.client.impl.module.client;
 
+import meteordevelopment.discordipc.DiscordIPC;
+import meteordevelopment.discordipc.RichPresence;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.shoreline.client.BuildConfig;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.shoreline.client.api.config.Config;
 import net.shoreline.client.api.config.setting.BooleanConfig;
 import net.shoreline.client.api.config.setting.NumberConfig;
-import net.shoreline.client.api.module.ConcurrentModule;
 import net.shoreline.client.api.module.ModuleCategory;
 import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.FinishLoadingEvent;
 import net.shoreline.client.impl.event.TickEvent;
 import net.shoreline.eventbus.annotation.EventListener;
-import meteordevelopment.discordipc.DiscordIPC;
-import meteordevelopment.discordipc.RichPresence;
 
-/**
- * @author ImLegiitXD
- * @since 1.0
- */
 public class RichPresenceModule extends ToggleModule {
+   private static final long APPLICATION_ID = 1388334762602528818L;
+   private final RichPresence presence = new RichPresence();
+   Config<Boolean> SHOW_SERVER = this.register(new BooleanConfig("Show Server", "Shows the server IP in RPC", false));
+   Config<Integer> UPDATE_DELAY = this.register(new NumberConfig<>("Delay", "Delay between RPC updates", 20, 60, 100));
+   private int ticks = 0;
 
-    private static final long APPLICATION_ID = 1388334762602528818L;
+   public RichPresenceModule() {
+      super("RPC", "Discord Rich Presence integration", ModuleCategory.CLIENT);
+   }
 
-    private final RichPresence presence = new RichPresence();
+   @Override
+   public void onEnable() {
+      DiscordIPC.start(1388334762602528818L, null);
+      this.presence.setStart(System.currentTimeMillis() / 1000L);
+      this.presence.setLargeImage("beta", "(beta-fa4cb0f)");
+   }
 
-    Config<Boolean> SHOW_SERVER = register(new BooleanConfig("Show Server", "Shows the server IP in RPC", false));
-    Config<Integer> UPDATE_DELAY = register(new NumberConfig<>("Delay", "Delay between RPC updates", 20, 60, 100));
-    private int ticks = 0;
+   @Override
+   public void onDisable() {
+      DiscordIPC.stop();
+   }
 
-    public RichPresenceModule() {
-        super("RPC", "Discord Rich Presence integration", ModuleCategory.CLIENT);
-    }
+   @EventListener
+   public void onGameFinishedInit(FinishLoadingEvent event) {
+      if (this.isEnabled()) {
+         this.onEnable();
+      }
+   }
 
-    public void onEnable() {
-        DiscordIPC.start(APPLICATION_ID, null);
-        presence.setStart(System.currentTimeMillis() / 1000L);
-        presence.setLargeImage((BuildConfig.BUILD_IDENTIFIER), ("(" + BuildConfig.BUILD_IDENTIFIER + "-" + BuildConfig.HASH + ")"));
-    }
+   @EventListener
+   public void onTick(TickEvent event) {
+      if (this.ticks-- <= 0) {
+         this.updateDetails();
+         DiscordIPC.setActivity(this.presence);
+         this.ticks = this.UPDATE_DELAY.getValue();
+      }
+   }
 
-    public void onDisable() {
-        DiscordIPC.stop();
-    }
-
-    @EventListener
-    public void onGameFinishedInit(FinishLoadingEvent event)
-    {
-        if (isEnabled()) {
-        onEnable();
-        }
-    }
-
-    @EventListener
-    public void onTick(TickEvent event) {
-        if (ticks-- <= 0) {
-            updateDetails();
-            DiscordIPC.setActivity(presence);
-            ticks = UPDATE_DELAY.getValue();
-        }
-    }
-
-    private void updateDetails() {
-        if (mc == null) {
-            presence.setDetails("Starting game...");
-            presence.setState("(" + BuildConfig.BUILD_IDENTIFIER + "-" + BuildConfig.HASH + ") b" + BuildConfig.BUILD_NUMBER);
-            return;
-        }
-
-        if (mc.screen instanceof TitleScreen || mc.screen instanceof net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen || mc.screen instanceof net.minecraft.client.gui.screens.worldselection.SelectWorldScreen) {
-            presence.setDetails("In Menus");
-            presence.setState("(" + BuildConfig.BUILD_IDENTIFIER + "-" + BuildConfig.HASH + ") b" + BuildConfig.BUILD_NUMBER);
-            return;
-        }
-
-        if (mc.isLocalServer()) {
-            presence.setDetails("Playing Singleplayer");
-            presence.setState("(" + BuildConfig.BUILD_IDENTIFIER + "-" + BuildConfig.HASH + ") b" + BuildConfig.BUILD_NUMBER);
-        } else if (mc.getCurrentServer() != null) {
-            presence.setDetails(SHOW_SERVER.getValue() ? "Playing " + mc.getCurrentServer().ip : "Playing Multiplayer");
-            presence.setState("(" + BuildConfig.BUILD_IDENTIFIER + "-" + BuildConfig.HASH + ") b" + BuildConfig.BUILD_NUMBER);
-        } else {
-            presence.setDetails("Idling");
-        }
-    }
+   private void updateDetails() {
+      if (mc == null) {
+         this.presence.setDetails("Starting game...");
+         this.presence.setState("(beta-fa4cb0f) b25");
+      } else if (!(mc.screen instanceof TitleScreen) && !(mc.screen instanceof JoinMultiplayerScreen) && !(mc.screen instanceof SelectWorldScreen)) {
+         if (mc.isLocalServer()) {
+            this.presence.setDetails("Playing Singleplayer");
+            this.presence.setState("(beta-fa4cb0f) b25");
+         } else if (mc.getCurrentServer() != null) {
+            this.presence.setDetails(this.SHOW_SERVER.getValue() ? "Playing " + mc.getCurrentServer().ip : "Playing Multiplayer");
+            this.presence.setState("(beta-fa4cb0f) b25");
+         } else {
+            this.presence.setDetails("Idling");
+         }
+      } else {
+         this.presence.setDetails("In Menus");
+         this.presence.setState("(beta-fa4cb0f) b25");
+      }
+   }
 }

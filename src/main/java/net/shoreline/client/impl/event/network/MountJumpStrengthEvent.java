@@ -4,18 +4,14 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class MountJumpStrengthEvent extends Event
-{
-    //
-    private float jumpStrength;
+public class MountJumpStrengthEvent extends Event {
+   private float jumpStrength;
 
-    public float getJumpStrength()
-    {
-        return jumpStrength;
-    }
+   public float getJumpStrength() {
+      return this.jumpStrength;
+   }
 
-    public void setJumpStrength(float jumpStrength)
-    {
-        this.jumpStrength = jumpStrength;
-    }
+   public void setJumpStrength(float jumpStrength) {
+      this.jumpStrength = jumpStrength;
+   }
 }

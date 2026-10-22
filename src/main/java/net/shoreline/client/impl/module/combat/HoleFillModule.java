@@ -1,5 +1,11 @@
 package net.shoreline.client.impl.module.combat;
 
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.network.protocol.game.ServerboundSwingPacket;
@@ -27,230 +33,161 @@ import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.render.animation.Animation;
 import net.shoreline.eventbus.annotation.EventListener;
 
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+public class HoleFillModule extends ObsidianPlacerModule {
+   private static HoleFillModule INSTANCE;
+   Config<Boolean> obsidianConfig = this.register(new BooleanConfig("Obsidian", "Fills obsidian holes", true));
+   Config<Boolean> doublesConfig = this.register(new BooleanConfig("Doubles", "Fills double holes", false));
+   Config<Float> rangeConfig = this.register(new NumberConfig<>("PlaceRange", "The range to fill nearby holes", 0.1F, 4.0F, 6.0F));
+   Config<Boolean> websConfig = this.register(new BooleanConfig("Webs", "Fills holes with webs", false));
+   Config<Boolean> autoConfig = this.register(new BooleanConfig("Auto", "Fills holes when enemies are within a certain range", false));
+   Config<Float> targetRangeConfig = this.register(
+      new NumberConfig<>("TargetRange", "The range from the target to the hole", 0.5F, 3.0F, 5.0F, () -> this.autoConfig.getValue())
+   );
+   Config<Float> enemyRangeConfig = this.register(
+      new NumberConfig<>("EnemyRange", "The maximum range of targets", 0.1F, 10.0F, 15.0F, () -> this.autoConfig.getValue())
+   );
+   Config<Boolean> attackConfig = this.register(new BooleanConfig("Attack", "Attacks crystals in the way of hole fill", true));
+   Config<Boolean> rotateConfig = this.register(new BooleanConfig("Rotate", "Rotates to block before placing", false));
+   Config<Integer> shiftTicksConfig = this.register(new NumberConfig<>("ShiftTicks", "The number of blocks to place per tick", 1, 2, 5));
+   Config<Integer> shiftDelayConfig = this.register(new NumberConfig<>("ShiftDelay", "The delay between each block placement interval", 0, 1, 5));
+   Config<Boolean> autoDisableConfig = this.register(new BooleanConfig("AutoDisable", "Disables after filling all holes", false));
+   Config<Boolean> renderConfig = this.register(new BooleanConfig("Render", "Renders where blocks are being filled", false));
+   Config<Integer> fadeTimeConfig = this.register(new NumberConfig<>("Fade-Time", "Time to fade", 0, 250, 1000, () -> false));
+   private int shiftDelay;
+   private final Map<BlockPos, Animation> fadeList = new HashMap<>();
+   private List<BlockPos> fills = new ArrayList<>();
 
-/**
- * @author linus
- * @since 1.0
- */
-public class HoleFillModule extends ObsidianPlacerModule
-{
-    private static HoleFillModule INSTANCE;
+   public HoleFillModule() {
+      super("HoleFill", "Fills in nearby holes with blocks", ModuleCategory.COMBAT);
+      INSTANCE = this;
+   }
 
-    //
-    Config<Boolean> obsidianConfig = register(new BooleanConfig("Obsidian", "Fills obsidian holes", true));
-    Config<Boolean> doublesConfig = register(new BooleanConfig("Doubles", "Fills double holes", false));
-    Config<Float> rangeConfig = register(new NumberConfig<>("PlaceRange", "The range to fill nearby holes", 0.1f, 4.0f, 6.0f));
-    Config<Boolean> websConfig = register(new BooleanConfig("Webs", "Fills holes with webs", false));
-    Config<Boolean> autoConfig = register(new BooleanConfig("Auto", "Fills holes when enemies are within a certain range", false));
-    Config<Float> targetRangeConfig = register(new NumberConfig<>("TargetRange", "The range from the target to the hole", 0.5f, 3.0f, 5.0f, () -> autoConfig.getValue()));
-    Config<Float> enemyRangeConfig = register(new NumberConfig<>("EnemyRange", "The maximum range of targets", 0.1f, 10.0f, 15.0f, () -> autoConfig.getValue()));
-    Config<Boolean> attackConfig = register(new BooleanConfig("Attack", "Attacks crystals in the way of hole fill", true));
-    Config<Boolean> rotateConfig = register(new BooleanConfig("Rotate", "Rotates to block before placing", false));
-    Config<Integer> shiftTicksConfig = register(new NumberConfig<>("ShiftTicks", "The number of blocks to place per tick", 1, 2, 5));
-    Config<Integer> shiftDelayConfig = register(new NumberConfig<>("ShiftDelay", "The delay between each block placement interval", 0, 1, 5));
-    Config<Boolean> autoDisableConfig = register(new BooleanConfig("AutoDisable", "Disables after filling all holes", false));
-    Config<Boolean> renderConfig = register(new BooleanConfig("Render", "Renders where blocks are being filled", false));
-    Config<Integer> fadeTimeConfig = register(new NumberConfig<>("Fade-Time", "Time to fade", 0, 250, 1000, () -> false));
-    private int shiftDelay;
-    private final Map<BlockPos, Animation> fadeList = new HashMap<>();
-    private List<BlockPos> fills = new ArrayList<>();
+   public static HoleFillModule getInstance() {
+      return INSTANCE;
+   }
 
-    /**
-     *
-     */
-    public HoleFillModule()
-    {
-        super("HoleFill", "Fills in nearby holes with blocks", ModuleCategory.COMBAT);
-        INSTANCE = this;
-    }
+   @Override
+   public void onDisable() {
+      this.fadeList.clear();
+      this.fills.clear();
+   }
 
-    public static HoleFillModule getInstance()
-    {
-        return INSTANCE;
-    }
+   @EventListener
+   public void onDisconnect(DisconnectEvent event) {
+      this.disable();
+   }
 
-    @Override
-    public void onDisable()
-    {
-        fadeList.clear();
-        fills.clear();
-    }
+   @EventListener
+   public void onPlayerTick(PlayerTickEvent event) {
+      int blocksPlaced = 0;
+      if (!this.multitaskConfig.getValue() && this.checkMultitask()) {
+         this.fills.clear();
+      } else {
+         int slot = this.websConfig.getValue() ? this.getBlockItemSlot(Blocks.COBWEB) : this.getResistantBlockItem().slot();
+         if (slot == -1) {
+            this.fills.clear();
+         } else if (this.shiftDelayConfig.getValue() > 0 && this.shiftDelay < this.shiftDelayConfig.getValue()) {
+            this.shiftDelay++;
+         } else {
+            List<BlockPos> holes = new ArrayList<>();
 
-    @EventListener
-    public void onDisconnect(DisconnectEvent event)
-    {
-        disable();
-    }
-
-    @EventListener
-    public void onPlayerTick(PlayerTickEvent event)
-    {
-        //
-        int blocksPlaced = 0;
-
-        if (!multitaskConfig.getValue() && checkMultitask())
-        {
-            fills.clear();
-            return;
-        }
-
-        final int slot = websConfig.getValue() ? getBlockItemSlot(Blocks.COBWEB) : getResistantBlockItem().slot();
-        if (slot == -1)
-        {
-            fills.clear();
-            return;
-        }
-
-        if (shiftDelayConfig.getValue() > 0 && shiftDelay < shiftDelayConfig.getValue())
-        {
-            shiftDelay++;
-            return;
-        }
-        List<BlockPos> holes = new ArrayList<>();
-        for (Hole hole : Managers.HOLE.getHoles())
-        {
-            if (hole.isQuad() || hole.isDouble() && !doublesConfig.getValue() || hole.getSafety() == HoleType.OBSIDIAN && !obsidianConfig.getValue())
-            {
-                continue;
-            }
-            if (hole.squaredDistanceTo(mc.player) > ((NumberConfig) rangeConfig).getValueSq())
-            {
-                continue;
+            for (Hole hole : Managers.HOLE.getHoles()) {
+               if (!hole.isQuad()
+                  && (!hole.isDouble() || this.doublesConfig.getValue())
+                  && (hole.getSafety() != HoleType.OBSIDIAN || this.obsidianConfig.getValue())
+                  && !(hole.squaredDistanceTo(mc.player) > ((NumberConfig)this.rangeConfig).getValueSq())
+                  && mc.level.isUnobstructed(DEFAULT_OBSIDIAN_STATE, hole.getPos(), CollisionContext.empty())) {
+                  if (this.autoConfig.getValue()) {
+                     for (Player entity : mc.level.players()) {
+                        if (entity != mc.player && !Managers.SOCIAL.isFriend(entity.getName())) {
+                           double dist = mc.player.distanceTo(entity);
+                           if (!(dist > this.enemyRangeConfig.getValue().floatValue())
+                              && (!(entity.getY() >= hole.y()) || !(hole.squaredDistanceTo(entity) > ((NumberConfig)this.targetRangeConfig).getValueSq()))) {
+                              holes.add(hole.getPos());
+                              break;
+                           }
+                        }
+                     }
+                  } else {
+                     holes.add(hole.getPos());
+                  }
+               }
             }
 
-            if (!mc.level.isUnobstructed(DEFAULT_OBSIDIAN_STATE, hole.getPos(), CollisionContext.empty()))
-            {
-                continue;
-            }
+            this.fills = holes;
+            if (this.fills.isEmpty()) {
+               if (this.autoDisableConfig.getValue()) {
+                  this.disable();
+               }
+            } else {
+               if (this.attackConfig.getValue()) {
+                  this.attackBlockingCrystals(this.fills);
+               }
 
-            if (autoConfig.getValue())
-            {
-                for (Player entity : mc.level.players())
-                {
-                    if (entity == mc.player || Managers.SOCIAL.isFriend(entity.getName()))
-                    {
-                        continue;
-                    }
-                    double dist = mc.player.distanceTo(entity);
-                    if (dist > enemyRangeConfig.getValue())
-                    {
-                        continue;
-                    }
-                    if (entity.getY() >= hole.y() &&
-                            hole.squaredDistanceTo(entity) > ((NumberConfig) targetRangeConfig).getValueSq())
-                    {
-                        continue;
-                    }
-                    holes.add(hole.getPos());
-                    break;
-                }
-            }
-            else
-            {
-                holes.add(hole.getPos());
-            }
-        }
-        fills = holes;
-        if (fills.isEmpty())
-        {
-            if (autoDisableConfig.getValue())
-            {
-                disable();
-            }
-            return;
-        }
-        if (attackConfig.getValue())
-        {
-            attackBlockingCrystals(fills);
-        }
-        while (blocksPlaced < shiftTicksConfig.getValue())
-        {
-            if (blocksPlaced >= fills.size())
-            {
-                break;
-            }
-            BlockPos targetPos = fills.get(blocksPlaced);
-            blocksPlaced++;
-            shiftDelay = 0;
-            // All rotations for shift ticks must send extra packet
-            // This may not work on all servers
-            placeBlock(targetPos, slot);
-        }
+               while (blocksPlaced < this.shiftTicksConfig.getValue() && blocksPlaced < this.fills.size()) {
+                  BlockPos targetPos = this.fills.get(blocksPlaced);
+                  blocksPlaced++;
+                  this.shiftDelay = 0;
+                  this.placeBlock(targetPos, slot);
+               }
 
-        if (rotateConfig.getValue())
-        {
-            Managers.ROTATION.setRotationSilentSync();
-        }
-    }
-
-    public void attackBlockingCrystals(List<BlockPos> posList)
-    {
-        for (BlockPos pos : posList)
-        {
-            Entity crystalEntity = mc.level.getEntities(null, new AABB(pos)).stream()
-                    .filter(e -> e instanceof EndCrystal).findFirst().orElse(null);
-            if (crystalEntity == null)
-            {
-                continue;
+               if (this.rotateConfig.getValue()) {
+                  Managers.ROTATION.setRotationSilentSync();
+               }
             }
+         }
+      }
+   }
+
+   public void attackBlockingCrystals(List<BlockPos> posList) {
+      for (BlockPos pos : posList) {
+         Entity crystalEntity = mc.level.getEntities(null, new AABB(pos)).stream().filter(e -> e instanceof EndCrystal).findFirst().orElse(null);
+         if (crystalEntity != null) {
             Managers.NETWORK.sendPacket(ServerboundInteractPacket.createAttackPacket(crystalEntity, mc.player.isShiftKeyDown()));
             Managers.NETWORK.sendPacket(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
             return;
-        }
-    }
+         }
+      }
+   }
 
-    private void placeBlock(BlockPos targetPos, int slot)
-    {
-        Managers.INTERACT.placeBlock(targetPos, slot, strictDirectionConfig.getValue(), false, (state, angles) ->
-        {
-            if (rotateConfig.getValue() && state)
-            {
-                Managers.ROTATION.setRotationSilent(angles[0], angles[1]);
-            }
-        });
-    }
+   private void placeBlock(BlockPos targetPos, int slot) {
+      Managers.INTERACT.placeBlock(targetPos, slot, this.strictDirectionConfig.getValue(), false, (state, angles) -> {
+         if (this.rotateConfig.getValue() && state) {
+            Managers.ROTATION.setRotationSilent(angles[0], angles[1]);
+         }
+      });
+   }
 
-    @EventListener
-    public void onRenderWorld(RenderWorldEvent event)
-    {
-        if (renderConfig.getValue())
-        {
-            RenderBuffers.preRender();
-            for (Map.Entry<BlockPos, Animation> set : fadeList.entrySet())
-            {
-                set.getValue().setState(false);
-                int boxAlpha = (int) (40 * set.getValue().getFactor());
-                int lineAlpha = (int) (100 * set.getValue().getFactor());
-                Color boxColor = ColorsModule.getInstance().getColor(boxAlpha);
-                Color lineColor = ColorsModule.getInstance().getColor(lineAlpha);
-                RenderManager.renderBox(event.getMatrices(), set.getKey(), boxColor.getRGB());
-                RenderManager.renderBoundingBox(event.getMatrices(), set.getKey(), 1.5f, lineColor.getRGB());
-            }
-            RenderBuffers.postRender();
+   @EventListener
+   public void onRenderWorld(RenderWorldEvent event) {
+      if (this.renderConfig.getValue()) {
+         RenderBuffers.preRender();
 
-            if (fills.isEmpty())
-            {
-                return;
-            }
+         for (Entry<BlockPos, Animation> set : this.fadeList.entrySet()) {
+            set.getValue().setState(false);
+            int boxAlpha = (int)(40.0 * set.getValue().getFactor());
+            int lineAlpha = (int)(100.0 * set.getValue().getFactor());
+            Color boxColor = ColorsModule.getInstance().getColor(boxAlpha);
+            Color lineColor = ColorsModule.getInstance().getColor(lineAlpha);
+            RenderManager.renderBox(event.getMatrices(), set.getKey(), boxColor.getRGB());
+            RenderManager.renderBoundingBox(event.getMatrices(), set.getKey(), 1.5F, lineColor.getRGB());
+         }
 
-            for (BlockPos pos : fills)
-            {
-                Animation animation = new Animation(true, fadeTimeConfig.getValue());
-                fadeList.put(pos, animation);
-            }
-        }
+         RenderBuffers.postRender();
+         if (this.fills.isEmpty()) {
+            return;
+         }
 
-        fadeList.entrySet().removeIf(e ->
-                e.getValue().getFactor() == 0.0);
-    }
+         for (BlockPos pos : this.fills) {
+            Animation animation = new Animation(true, this.fadeTimeConfig.getValue().intValue());
+            this.fadeList.put(pos, animation);
+         }
+      }
 
-    public boolean isPlacing()
-    {
-        return !fills.isEmpty();
-    }
+      this.fadeList.entrySet().removeIf(e -> e.getValue().getFactor() == 0.0);
+   }
+
+   public boolean isPlacing() {
+      return !this.fills.isEmpty();
+   }
 }

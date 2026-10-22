@@ -13,59 +13,42 @@ import net.shoreline.client.impl.event.entity.passive.EntitySteerEvent;
 import net.shoreline.client.impl.event.network.MountJumpStrengthEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class EntityControlModule extends ToggleModule
-{
-    //
-    Config<Float> jumpStrengthConfig = register(new NumberConfig<>("JumpStrength", "The fixed jump strength of the mounted entity", 0.1f, 0.7f, 2.0f));
-    Config<Boolean> noPigMoveConfig = register(new BooleanConfig("NoPigAI", "Prevents the pig movement when controlling pigs", false));
+public class EntityControlModule extends ToggleModule {
+   Config<Float> jumpStrengthConfig = this.register(new NumberConfig<>("JumpStrength", "The fixed jump strength of the mounted entity", 0.1F, 0.7F, 2.0F));
+   Config<Boolean> noPigMoveConfig = this.register(new BooleanConfig("NoPigAI", "Prevents the pig movement when controlling pigs", false));
 
-    public EntityControlModule()
-    {
-        super("EntityControl", "Allows you to steer entities without a saddle", ModuleCategory.MOVEMENT);
-    }
+   public EntityControlModule() {
+      super("EntityControl", "Allows you to steer entities without a saddle", ModuleCategory.MOVEMENT);
+   }
 
-    @EventListener
-    public void onTick(TickEvent event)
-    {
-        Entity vehicle = mc.player.getVehicle();
-        if (vehicle == null)
-        {
-            return;
-        }
-        vehicle.setYRot(mc.player.getYRot());
-        if (vehicle instanceof Llama llama)
-        {
+   @EventListener
+   public void onTick(TickEvent event) {
+      Entity vehicle = mc.player.getVehicle();
+      if (vehicle != null) {
+         vehicle.setYRot(mc.player.getYRot());
+         if (vehicle instanceof Llama llama) {
             llama.yHeadRot = mc.player.getYRot();
-        }
-    }
+         }
+      }
+   }
 
-    @EventListener
-    public void onEntitySteer(EntitySteerEvent event)
-    {
-        event.cancel();
-    }
+   @EventListener
+   public void onEntitySteer(EntitySteerEvent event) {
+      event.cancel();
+   }
 
-    @EventListener
-    public void onMountJumpStrength(MountJumpStrengthEvent event)
-    {
-        event.cancel();
-        event.setJumpStrength(jumpStrengthConfig.getValue());
-    }
+   @EventListener
+   public void onMountJumpStrength(MountJumpStrengthEvent event) {
+      event.cancel();
+      event.setJumpStrength(this.jumpStrengthConfig.getValue());
+   }
 
-    @EventListener
-    public void onPigAI(PigAIEvent event)
-    {
-        if (mc.player == null)
-        {
-            return;
-        }
-        if (noPigMoveConfig.getValue() && event.getPigEntity().getPassengers().contains(mc.player))
-        {
+   @EventListener
+   public void onPigAI(PigAIEvent event) {
+      if (mc.player != null) {
+         if (this.noPigMoveConfig.getValue() && event.getPigEntity().getPassengers().contains(mc.player)) {
             event.cancel();
-        }
-    }
+         }
+      }
+   }
 }

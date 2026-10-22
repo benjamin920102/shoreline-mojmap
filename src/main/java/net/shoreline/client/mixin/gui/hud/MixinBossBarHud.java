@@ -9,26 +9,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(BossHealthOverlay.class)
-public class MixinBossBarHud
-{
-    /**
-     * @param context
-     * @param ci
-     */
-    @Inject(method = "render", at = @At(value = "HEAD"), cancellable = true)
-    private void hookRender(GuiGraphics context, CallbackInfo ci)
-    {
-        RenderOverlayEvent.BossBar renderOverlayEvent =
-                new RenderOverlayEvent.BossBar(context);
-        EventBus.INSTANCE.dispatch(renderOverlayEvent);
-        if (renderOverlayEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+@Mixin({BossHealthOverlay.class})
+public class MixinBossBarHud {
+   @Inject(
+      method = {"render(Lnet/minecraft/client/gui/GuiGraphics;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookRender(GuiGraphics context, CallbackInfo ci) {
+      RenderOverlayEvent.BossBar renderOverlayEvent = new RenderOverlayEvent.BossBar(context);
+      EventBus.INSTANCE.dispatch(renderOverlayEvent);
+      if (renderOverlayEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 }

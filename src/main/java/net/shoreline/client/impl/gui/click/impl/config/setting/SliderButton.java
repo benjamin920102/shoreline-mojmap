@@ -1,5 +1,7 @@
 package net.shoreline.client.impl.gui.click.impl.config.setting;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
 import net.shoreline.client.api.config.Config;
@@ -14,316 +16,212 @@ import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.math.timer.CacheTimer;
 import net.shoreline.client.util.math.timer.Timer;
 import org.apache.commons.lang3.ArrayUtils;
-import org.lwjgl.glfw.GLFW;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+public class SliderButton<T extends Number> extends ConfigButton<T> {
+   private final int scale;
+   private char[] buffer;
+   private boolean typing;
+   private boolean idling;
+   private final Timer idleTimer = new CacheTimer();
 
-/**
- * @param <T>
- * @author linus
- * @since 1.0
- */
-public class SliderButton<T extends Number> extends ConfigButton<T>
-{
-    // Slider rounding scale
-    private final int scale;
+   public SliderButton(CategoryFrame frame, ModuleButton moduleButton, Config<T> config, float x, float y) {
+      super(frame, moduleButton, config, x, y);
+      String sval = String.valueOf(config.getValue());
+      this.scale = sval.substring(sval.indexOf(".") + 1).length();
+      if (config.getValue() instanceof Integer) {
+         this.buffer = String.valueOf(config.getValue().intValue()).toCharArray();
+      } else if (config.getValue() instanceof Float) {
+         this.buffer = String.valueOf(config.getValue().floatValue()).toCharArray();
+      } else if (config.getValue() instanceof Double) {
+         this.buffer = String.valueOf(config.getValue().doubleValue()).toCharArray();
+      }
+   }
 
-    private char[] buffer;
-    private boolean typing;
-    // Insertion point
-    private boolean idling;
-    private final Timer idleTimer = new CacheTimer();
+   @Override
+   public void render(GuiGraphics context, float ix, float iy, float mouseX, float mouseY, float delta) {
+      this.setHeight(RenderManager.textHeight() + 4.0F);
+      this.x = ix;
+      this.y = iy;
+      boolean state = this.isWithin(mouseX, mouseY);
+      if (state != this.hoverAnimation.getState()) {
+         this.hoverAnimation.setState(state);
+      }
 
-    /**
-     * @param frame
-     * @param config
-     */
-    public SliderButton(CategoryFrame frame, ModuleButton moduleButton, Config<T> config, float x, float y)
-    {
-        super(frame, moduleButton, config, x, y);
-        //
-        final String sval = String.valueOf(config.getValue());
-        scale = sval.substring(sval.indexOf(".") + 1).length();
-        if (config.getValue() instanceof Integer)
-        {
-            buffer = String.valueOf(config.getValue().intValue()).toCharArray();
-        }
-        else if (config.getValue() instanceof Float)
-        {
-            buffer = String.valueOf(config.getValue().floatValue()).toCharArray();
-        }
-        else if (config.getValue() instanceof Double)
-        {
-            buffer = String.valueOf(config.getValue().doubleValue()).toCharArray();
-        }
-    }
+      int hoverAlpha = (int)(80.0 * Mth.clamp(this.hoverAnimation.getFactor(), 0.0, 1.0));
+      Number min = ((NumberConfig)this.config).getMin();
+      Number max = ((NumberConfig)this.config).getMax();
+      if (this.isWithin(mouseX, mouseY) && ClickGuiScreen.MOUSE_LEFT_HOLD) {
+         float fillv = (mouseX - ix) / (this.width * ClickGuiModule.CLICK_GUI_SCALE);
+         if (this.config.getValue() instanceof Integer) {
+            float val = min.floatValue() + fillv * (max.intValue() - min.intValue());
+            int bval = (int)Mth.clamp(val, (float)min.intValue(), (float)max.intValue());
+            ((NumberConfig)this.config).setValue(bval);
+         } else if (this.config.getValue() instanceof Float) {
+            float val = min.floatValue() + fillv * (max.floatValue() - min.floatValue());
+            float bval = Mth.clamp(val, min.floatValue(), max.floatValue());
+            BigDecimal bigDecimal = new BigDecimal((double)bval);
+            bval = bigDecimal.setScale(this.scale, RoundingMode.HALF_UP).floatValue();
+            ((NumberConfig)this.config).setValue(bval);
+         } else if (this.config.getValue() instanceof Double) {
+            double val = min.doubleValue() + fillv * (max.doubleValue() - min.doubleValue());
+            double bval = Mth.clamp(val, min.doubleValue(), max.doubleValue());
+            BigDecimal bigDecimal = new BigDecimal(bval);
+            bval = bigDecimal.setScale(this.scale, RoundingMode.HALF_UP).doubleValue();
+            ((NumberConfig)this.config).setValue(bval);
+         }
 
-    /**
-     * @param context
-     * @param ix
-     * @param iy
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    @Override
-    public void render(GuiGraphics context, float ix, float iy, float mouseX, float mouseY, float delta)
-    {
-        setHeight(RenderManager.textHeight() + 4.0f);
-        x = ix;
-        y = iy;
+         float lower = Mth.ceil(this.x + ClickGuiModule.CLICK_GUI_SCALE);
+         float upper = Mth.floor(this.x + this.width * ClickGuiModule.CLICK_GUI_SCALE - ClickGuiModule.CLICK_GUI_SCALE);
+         if (mouseX < lower) {
+            this.config.setValue((T)min);
+         } else if (mouseX >= upper) {
+            this.config.setValue((T)max);
+         }
+      }
 
-        boolean state = isWithin(mouseX, mouseY);
-        if (state != hoverAnimation.getState())
-        {
-            hoverAnimation.setState(state);
-        }
-        int hoverAlpha = (int) (80 * Mth.clamp(hoverAnimation.getFactor(), 0.0f, 1.0f));
+      if (!this.typing) {
+         if (this.config.getValue() instanceof Integer) {
+            this.buffer = String.valueOf(this.config.getValue().intValue()).toCharArray();
+         } else if (this.config.getValue() instanceof Float) {
+            this.buffer = String.valueOf(this.config.getValue().floatValue()).toCharArray();
+         } else if (this.config.getValue() instanceof Double) {
+            this.buffer = String.valueOf(this.config.getValue().doubleValue()).toCharArray();
+         }
 
-        //
-        Number min = ((NumberConfig<T>) config).getMin();
-        Number max = ((NumberConfig<T>) config).getMax();
-        if (isWithin(mouseX, mouseY) && ClickGuiScreen.MOUSE_LEFT_HOLD)
-        {
-            float fillv = (mouseX - ix) / (width * ClickGuiModule.CLICK_GUI_SCALE);
-            if (config.getValue() instanceof Integer)
-            {
-                float val = min.floatValue() + fillv * (max.intValue() - min.intValue());
-                int bval = (int) Mth.clamp(val, min.intValue(), max.intValue());
-                ((NumberConfig<Integer>) config).setValue(bval);
+         float fill = (this.config.getValue().floatValue() - min.floatValue()) / (max.floatValue() - min.floatValue());
+         this.fill(
+            context,
+            ix,
+            iy,
+            fill * this.width * ClickGuiModule.CLICK_GUI_SCALE,
+            this.height * ClickGuiModule.CLICK_GUI_SCALE,
+            ClickGuiModule.getInstance().getColor(100 + hoverAlpha)
+         );
+      }
+
+      int whiteText = -1;
+      this.drawStringScaled(
+         context,
+         this.typing ? new String(this.buffer) + this.getInsertionPoint() : this.config.getName(),
+         ix + 2.0F * ClickGuiModule.CLICK_GUI_SCALE,
+         iy + 4.0F * ClickGuiModule.CLICK_GUI_SCALE,
+         whiteText
+      );
+      float textLeng = RenderManager.textWidth(this.config.getName()) * ClickGuiModule.CLICK_GUI_SCALE;
+      if (!this.typing) {
+         int grayText = -5592406;
+         this.drawStringScaled(
+            context, " " + this.config.getValue(), ix + 2.0F * ClickGuiModule.CLICK_GUI_SCALE + textLeng, iy + 4.0F * ClickGuiModule.CLICK_GUI_SCALE, grayText
+         );
+      }
+   }
+
+   @Override
+   public void mouseClicked(double mouseX, double mouseY, int button) {
+      if (this.isWithin(mouseX, mouseY)) {
+         if (button == 1) {
+            if (this.typing) {
+               String number = new String(this.buffer);
+
+               try {
+                  if (this.config.getValue() instanceof Integer) {
+                     ((NumberConfig)this.config).setValue(Integer.parseInt(number));
+                  } else if (this.config.getValue() instanceof Float) {
+                     ((NumberConfig)this.config).setValue(Float.parseFloat(number));
+                  } else if (this.config.getValue() instanceof Double) {
+                     ((NumberConfig)this.config).setValue(Double.parseDouble(number));
+                  }
+               } catch (NumberFormatException var8) {
+               }
+
+               this.typing = false;
+            } else {
+               this.typing = true;
             }
-            else if (config.getValue() instanceof Float)
-            {
-                float val = min.floatValue() + fillv * (max.floatValue() - min.floatValue());
-                float bval = Mth.clamp(val, min.floatValue(),
-                        max.floatValue());
-                BigDecimal bigDecimal = new BigDecimal(bval);
-                bval = bigDecimal.setScale(scale, RoundingMode.HALF_UP).floatValue();
-                ((NumberConfig<Float>) config).setValue(bval);
-            }
-            else if (config.getValue() instanceof Double)
-            {
-                double val = min.doubleValue() + fillv * (max.doubleValue() - min.doubleValue());
-                double bval = Mth.clamp(val, min.doubleValue(),
-                        max.doubleValue());
-                BigDecimal bigDecimal = new BigDecimal(bval);
-                bval = bigDecimal.setScale(scale, RoundingMode.HALF_UP).doubleValue();
-                ((NumberConfig<Double>) config).setValue(bval);
-            }
-            float lower = Mth.ceil(x + ClickGuiModule.CLICK_GUI_SCALE);
-            float upper = Mth.floor(x + (width * ClickGuiModule.CLICK_GUI_SCALE) - ClickGuiModule.CLICK_GUI_SCALE);
-            // out of bounds
-            if (mouseX < lower)
-            {
-                config.setValue((T) min);
-            }
-            else if (mouseX >= upper)
-            {
-                config.setValue((T) max);
-            }
-        }
-        // slider fill
-        if (!typing)
-        {
-            if (config.getValue() instanceof Integer)
-            {
-                buffer = String.valueOf(config.getValue().intValue()).toCharArray();
-            }
-            else if (config.getValue() instanceof Float)
-            {
-                buffer = String.valueOf(config.getValue().floatValue()).toCharArray();
-            }
-            else if (config.getValue() instanceof Double)
-            {
-                buffer = String.valueOf(config.getValue().doubleValue()).toCharArray();
-            }
-            float fill = (config.getValue().floatValue() - min.floatValue())
-                    / (max.floatValue() - min.floatValue());
-            fill(context, ix, iy, (fill * width * ClickGuiModule.CLICK_GUI_SCALE), height * ClickGuiModule.CLICK_GUI_SCALE, ClickGuiModule.getInstance().getColor(100 + hoverAlpha));
-        }
+         }
 
-        int whiteText = -1;
-        drawStringScaled(context, typing ? new String(buffer) + getInsertionPoint() : config.getName(), ix + (2.0f * ClickGuiModule.CLICK_GUI_SCALE), iy + (4.0f * ClickGuiModule.CLICK_GUI_SCALE), whiteText);
+         if (ClickGuiModule.getInstance().getSounds()) {
+            Managers.SOUND.playSound(SoundManager.GUI_CLICK);
+         }
+      } else {
+         this.typing = false;
+      }
+   }
 
-        float textLeng = RenderManager.textWidth(config.getName()) * ClickGuiModule.CLICK_GUI_SCALE;
+   @Override
+   public void mouseReleased(double mouseX, double mouseY, int button) {
+   }
 
-        if (!typing)
-        {
-            int grayText = 0xFFAAAAAA;
-            drawStringScaled(context, " " + config.getValue(), ix + (2.0F * ClickGuiModule.CLICK_GUI_SCALE) + textLeng, iy + (4.0F * ClickGuiModule.CLICK_GUI_SCALE), grayText);
-        }
-    }
+   @Override
+   public void keyPressed(int keyCode, int scanCode, int modifiers) {
+      if (this.typing) {
+         switch (keyCode) {
+            case 256:
+               if (this.config.getValue() instanceof Integer) {
+                  this.buffer = String.valueOf(this.config.getValue().intValue()).toCharArray();
+               } else if (this.config.getValue() instanceof Float) {
+                  this.buffer = String.valueOf(this.config.getValue().floatValue()).toCharArray();
+               } else if (this.config.getValue() instanceof Double) {
+                  this.buffer = String.valueOf(this.config.getValue().doubleValue()).toCharArray();
+               }
 
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseClicked(double mouseX, double mouseY, int button)
-    {
-        if (isWithin(mouseX, mouseY))
-        {
-            if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT)
-            {
-                if (typing)
-                {
-                    String number = new String(buffer);
-                    try
-                    {
-                        if (config.getValue() instanceof Integer)
-                        {
-                            ((NumberConfig<Integer>) config).setValue(Integer.parseInt(number));
-                        }
-                        else if (config.getValue() instanceof Float)
-                        {
-                            ((NumberConfig<Float>) config).setValue(Float.parseFloat(number));
-                        }
-                        else if (config.getValue() instanceof Double)
-                        {
-                            ((NumberConfig<Double>) config).setValue(Double.parseDouble(number));
-                        }
-                    }
-                    catch (NumberFormatException ignored)
-                    {
+               this.typing = false;
+               break;
+            case 257:
+               String number = new String(this.buffer);
 
-                    }
-                    typing = false;
-                }
-                else
-                {
-                    typing = true;
-                }
-            }
+               try {
+                  if (this.config.getValue() instanceof Integer) {
+                     ((NumberConfig)this.config).setValue(Integer.parseInt(number));
+                  } else if (this.config.getValue() instanceof Float) {
+                     ((NumberConfig)this.config).setValue(Float.parseFloat(number));
+                  } else if (this.config.getValue() instanceof Double) {
+                     ((NumberConfig)this.config).setValue(Double.parseDouble(number));
+                  }
+               } catch (NumberFormatException var6) {
+               }
 
-            if (ClickGuiModule.getInstance().getSounds())
-            {
-                Managers.SOUND.playSound(SoundManager.GUI_CLICK);
-            }
-        }
-        else
-        {
-            typing = false;
-        }
-    }
+               if (this.config.getValue() instanceof Integer) {
+                  this.buffer = String.valueOf(this.config.getValue().intValue()).toCharArray();
+               } else if (this.config.getValue() instanceof Float) {
+                  this.buffer = String.valueOf(this.config.getValue().floatValue()).toCharArray();
+               } else if (this.config.getValue() instanceof Double) {
+                  this.buffer = String.valueOf(this.config.getValue().doubleValue()).toCharArray();
+               }
 
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseReleased(double mouseX, double mouseY, int button)
-    {
+               this.typing = false;
+            case 258:
+            default:
+               break;
+            case 259:
+               if (this.buffer.length != 0) {
+                  this.buffer = ArrayUtils.remove(this.buffer, this.buffer.length - 1);
+               }
+         }
+      }
+   }
 
-    }
+   @Override
+   public void charTyped(char character, int modifiers) {
+      if (this.typing && (Character.isDigit(character) || character == '.')) {
+         this.buffer = ArrayUtils.add(this.buffer, character);
+      }
+   }
 
-    /**
-     * @param keyCode
-     * @param scanCode
-     * @param modifiers
-     */
-    @Override
-    public void keyPressed(int keyCode, int scanCode, int modifiers)
-    {
-        if (typing)
-        {
-            switch (keyCode)
-            {
-                case GLFW.GLFW_KEY_ENTER ->
-                {
-                    String number = new String(buffer);
-                    try
-                    {
-                        if (config.getValue() instanceof Integer)
-                        {
-                            ((NumberConfig<Integer>) config).setValue(Integer.parseInt(number));
-                        }
-                        else if (config.getValue() instanceof Float)
-                        {
-                            ((NumberConfig<Float>) config).setValue(Float.parseFloat(number));
-                        }
-                        else if (config.getValue() instanceof Double)
-                        {
-                            ((NumberConfig<Double>) config).setValue(Double.parseDouble(number));
-                        }
-                    }
-                    catch (NumberFormatException ignored)
-                    {
+   public String getInsertionPoint() {
+      if (this.idleTimer.passed(250)) {
+         this.idling = !this.idling;
+         this.idleTimer.reset();
+      }
 
-                    }
-                    if (config.getValue() instanceof Integer)
-                    {
-                        buffer = String.valueOf(config.getValue().intValue()).toCharArray();
-                    }
-                    else if (config.getValue() instanceof Float)
-                    {
-                        buffer = String.valueOf(config.getValue().floatValue()).toCharArray();
-                    }
-                    else if (config.getValue() instanceof Double)
-                    {
-                        buffer = String.valueOf(config.getValue().doubleValue()).toCharArray();
-                    }
-                    typing = false;
-                }
-                case GLFW.GLFW_KEY_BACKSPACE ->
-                {
-                    if (buffer.length != 0)
-                    {
-                        buffer = ArrayUtils.remove(buffer, buffer.length - 1);
-                    }
-                }
-                case GLFW.GLFW_KEY_ESCAPE ->
-                {
-                    if (config.getValue() instanceof Integer)
-                    {
-                        buffer = String.valueOf(config.getValue().intValue()).toCharArray();
-                    }
-                    else if (config.getValue() instanceof Float)
-                    {
-                        buffer = String.valueOf(config.getValue().floatValue()).toCharArray();
-                    }
-                    else if (config.getValue() instanceof Double)
-                    {
-                        buffer = String.valueOf(config.getValue().doubleValue()).toCharArray();
-                    }
-                    typing = false;
-                }
-            }
-        }
-    }
+      return this.idling && this.typing ? "_" : "";
+   }
 
-    @Override
-    public void charTyped(char character, int modifiers)
-    {
-        if (typing && (Character.isDigit(character) || character == '.'))
-        {
-            buffer = ArrayUtils.add(buffer, character);
-        }
-    }
+   public void endTyping() {
+      this.typing = false;
+   }
 
-    public String getInsertionPoint()
-    {
-        if (idleTimer.passed(250))
-        {
-            idling = !idling;
-            idleTimer.reset();
-        }
-        if (idling && typing)
-        {
-            return "_";
-        }
-        return "";
-    }
-
-    public void endTyping()
-    {
-        typing = false;
-    }
-
-    public boolean isTyping()
-    {
-        return typing;
-    }
+   public boolean isTyping() {
+      return this.typing;
+   }
 }

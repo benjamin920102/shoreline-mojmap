@@ -10,39 +10,25 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(ItemStack.class)
-public abstract class MixinItemStack
-{
-    /**
-     * @return
-     */
-    @Shadow
-    public abstract int getDamageValue();
+@Mixin({ItemStack.class})
+public abstract class MixinItemStack {
+   @Shadow
+   public abstract int getDamageValue();
 
-    @Shadow
-    public abstract void setDamageValue(int damage);
+   @Shadow
+   public abstract void setDamageValue(int var1);
 
-    /**
-     * @param item
-     * @param count
-     * @param ci
-     */
-    @Inject(method = "<init>(Lnet/minecraft/world/level/ItemLike;I)V", at = @At(value = "RETURN"))
-    private void hookInitItem(ItemLike item, int count, CallbackInfo ci)
-    {
-        if (EventBus.INSTANCE == null)
-        {
-            return;
-        }
-        DurabilityEvent durabilityEvent = new DurabilityEvent(getDamageValue());
-        EventBus.INSTANCE.dispatch(durabilityEvent);
-        if (durabilityEvent.isCanceled())
-        {
-            setDamageValue(durabilityEvent.getDamage());
-        }
-    }
+   @Inject(
+      method = {"<init>(Lnet/minecraft/world/level/ItemLike;I)V"},
+      at = {@At("RETURN")}
+   )
+   private void hookInitItem(ItemLike item, int count, CallbackInfo ci) {
+      if (EventBus.INSTANCE != null) {
+         DurabilityEvent durabilityEvent = new DurabilityEvent(this.getDamageValue());
+         EventBus.INSTANCE.dispatch(durabilityEvent);
+         if (durabilityEvent.isCanceled()) {
+            this.setDamageValue(durabilityEvent.getDamage());
+         }
+      }
+   }
 }

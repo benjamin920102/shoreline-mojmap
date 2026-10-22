@@ -8,78 +8,64 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class PlayerListIconEvent extends Event
-{
-    @Cancelable
-    public static class Width extends PlayerListIconEvent
-    {
-        private final String text;
+public class PlayerListIconEvent extends Event {
+   @Cancelable
+   public static class Render extends PlayerListIconEvent {
+      private final Component playerName;
+      private final GuiGraphics context;
+      private final Font textRenderer;
+      private final double x;
+      private final double y;
+      private final int color;
 
-        public Width(String text)
-        {
-            this.text = text;
-        }
+      public Render(Component playerName, GuiGraphics context, Font textRenderer, double x, double y, int color) {
+         this.context = context;
+         this.textRenderer = textRenderer;
+         this.playerName = playerName;
+         this.x = x;
+         this.y = y;
+         this.color = color;
+      }
 
-        public String getText()
-        {
-            return text;
-        }
-    }
+      public GuiGraphics getContext() {
+         return this.context;
+      }
 
-    @Cancelable
-    public static class Render extends PlayerListIconEvent
-    {
-        private final Component playerName;
+      public PoseStack getMatrixStack() {
+         return this.context.pose();
+      }
 
-        private final GuiGraphics context;
-        private final Font textRenderer;
-        private final double x;
-        private final double y;
-        private final int color;
+      public Font getTextRenderer() {
+         return this.textRenderer;
+      }
 
-        public Render(Component playerName, GuiGraphics context, Font textRenderer, double x, double y, int color)
-        {
-            this.context = context;
-            this.textRenderer = textRenderer;
-            this.playerName = playerName;
-            this.x = x;
-            this.y = y;
-            this.color = color;
-        }
+      public double getX() {
+         return this.x;
+      }
 
-        public GuiGraphics getContext()
-        {
-            return context;
-        }
+      public double getY() {
+         return this.y;
+      }
 
-        public PoseStack getMatrixStack()
-        {
-            return context.pose();
-        }
+      public int getColor() {
+         return this.color;
+      }
 
-        public Font getTextRenderer()
-        {
-            return textRenderer;
-        }
+      public Component getPlayerNameText() {
+         return this.playerName;
+      }
+   }
 
-        public double getX()
-        {
-            return x;
-        }
+   @Cancelable
+   public static class Width extends PlayerListIconEvent {
+      private final String text;
 
-        public double getY()
-        {
-            return y;
-        }
+      public Width(String text) {
+         this.text = text;
+      }
 
-        public int getColor()
-        {
-            return color;
-        }
-
-        public Component getPlayerNameText()
-        {
-            return playerName;
-        }
-    }
+      public String getText() {
+         return this.text;
+      }
+   }
 }

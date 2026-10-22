@@ -1,6 +1,7 @@
 package net.shoreline.client.mixin.gui.screen;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
@@ -15,59 +16,48 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import static net.minecraft.client.gui.screens.Screen.hasShiftDown;
-import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
+@Mixin({AbstractContainerScreen.class})
+public abstract class MixinHandledScreen {
+   @Shadow
+   @Nullable
+   protected Slot hoveredSlot;
+   @Shadow
+   private boolean doubleclick;
 
-@Mixin(AbstractContainerScreen.class)
-public abstract class MixinHandledScreen
-{
+   @Shadow
+   @Nullable
+   protected abstract Slot findSlot(double var1, double var3);
 
-    @Shadow
-    @Nullable
-    protected abstract Slot findSlot(double xPosition, double yPosition);
+   @Shadow
+   protected abstract void slotClicked(Slot var1, int var2, int var3, ClickType var4);
 
-    @Shadow
-    @Nullable
-    protected Slot hoveredSlot;
-
-    @Shadow
-    private boolean doubleclick;
-
-    @Shadow
-    protected abstract void slotClicked(Slot slot, int invSlot, int clickData, ClickType actionType);
-
-
-    @Inject(method = "renderTooltip", at = @At(value = "HEAD"), cancellable = true)
-    private void hookDrawMouseoverTooltip(GuiGraphics context, int x, int y, CallbackInfo ci)
-    {
-        if (hoveredSlot == null)
-        {
-            return;
-        }
-        RenderTooltipEvent renderTooltipEvent =
-                new RenderTooltipEvent(context, hoveredSlot.getItem(), x, y);
-        EventBus.INSTANCE.dispatch(renderTooltipEvent);
-        if (renderTooltipEvent.isCanceled())
-        {
+   @Inject(
+      method = {"renderTooltip(Lnet/minecraft/client/gui/GuiGraphics;II)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookDrawMouseoverTooltip(GuiGraphics context, int x, int y, CallbackInfo ci) {
+      if (this.hoveredSlot != null) {
+         RenderTooltipEvent renderTooltipEvent = new RenderTooltipEvent(context, this.hoveredSlot.getItem(), x, y);
+         EventBus.INSTANCE.dispatch(renderTooltipEvent);
+         if (renderTooltipEvent.isCanceled()) {
             ci.cancel();
-        }
-    }
+         }
+      }
+   }
 
-    @Inject(method = "mouseDragged", at = @At("TAIL"))
-    private void hookMouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY, CallbackInfoReturnable<Boolean> cir)
-    {
-        MouseDraggedEvent mouseDraggedEvent = new MouseDraggedEvent();
-        EventBus.INSTANCE.dispatch(mouseDraggedEvent);
-        if (button != GLFW_MOUSE_BUTTON_LEFT
-                || doubleclick
-                || !mouseDraggedEvent.isCanceled())
-        {
-            return;
-        }
-        Slot slot = findSlot(mouseX, mouseY);
-        if (slot != null && slot.hasItem() && hasShiftDown())
-        {
-            slotClicked(slot, slot.index, button, ClickType.QUICK_MOVE);
-        }
-    }
+   @Inject(
+      method = {"mouseDragged(DDIDD)Z"},
+      at = {@At("TAIL")}
+   )
+   private void hookMouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY, CallbackInfoReturnable<Boolean> cir) {
+      MouseDraggedEvent mouseDraggedEvent = new MouseDraggedEvent();
+      EventBus.INSTANCE.dispatch(mouseDraggedEvent);
+      if (button == 0 && !this.doubleclick && mouseDraggedEvent.isCanceled()) {
+         Slot slot = this.findSlot(mouseX, mouseY);
+         if (slot != null && slot.hasItem() && Screen.hasShiftDown()) {
+            this.slotClicked(slot, slot.index, button, ClickType.QUICK_MOVE);
+         }
+      }
+   }
 }

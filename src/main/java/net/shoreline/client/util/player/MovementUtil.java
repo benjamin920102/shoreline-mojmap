@@ -7,145 +7,99 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.phys.Vec2;
 import net.shoreline.client.util.Globals;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class MovementUtil implements Globals
-{
-    /**
-     * @return
-     */
-    public static boolean isInputtingMovement()
-    {
-        return mc.options.keyUp.isDown()
-                || mc.options.keyDown.isDown()
-                || mc.options.keyLeft.isDown()
-                || mc.options.keyRight.isDown();
-    }
+public class MovementUtil implements Globals {
+   public static boolean isInputtingMovement() {
+      return mc.options.keyUp.isDown() || mc.options.keyDown.isDown() || mc.options.keyLeft.isDown() || mc.options.keyRight.isDown();
+   }
 
-    /**
-     * @return
-     */
-    public static boolean isMovingInput()
-    {
-        return mc.player.input.forwardImpulse != 0.0f
-                || mc.player.input.leftImpulse != 0.0f;
-    }
+   public static boolean isMovingInput() {
+      return mc.player.input.forwardImpulse != 0.0F || mc.player.input.leftImpulse != 0.0F;
+   }
 
-    /**
-     * @return
-     */
-    public static boolean isMoving()
-    {
-        double d = mc.player.getX() - mc.player.xLast;
-        double e = mc.player.getY() - mc.player.yLast1;
-        double f = mc.player.getZ() - mc.player.zLast;
-        return Mth.lengthSquared(d, e, f) > Mth.square(2.0e-4);
-    }
+   public static boolean isMoving() {
+      double d = mc.player.getX() - mc.player.xLast;
+      double e = mc.player.getY() - mc.player.yLast1;
+      double f = mc.player.getZ() - mc.player.zLast;
+      return Mth.lengthSquared(d, e, f) > Mth.square(2.0E-4);
+   }
 
-    public static void applySneak()
-    {
-        final float modifier = Mth.clamp(0.3f + (EnchantmentUtil.getLevel(mc.player.getItemBySlot(EquipmentSlot.FEET), Enchantments.SWIFT_SNEAK) * 0.15F), 0.0f, 1.0f);
-        mc.player.input.forwardImpulse *= modifier;
-        mc.player.input.leftImpulse *= modifier;
-    }
+   public static void applySneak() {
+      float modifier = Mth.clamp(0.3F + EnchantmentUtil.getLevel(mc.player.getItemBySlot(EquipmentSlot.FEET), Enchantments.SWIFT_SNEAK) * 0.15F, 0.0F, 1.0F);
+      mc.player.input.forwardImpulse *= modifier;
+      mc.player.input.leftImpulse *= modifier;
+   }
 
-    public static Vec2 applySafewalk(final double motionX, final double motionZ)
-    {
-        final double offset = 0.05;
+   public static Vec2 applySafewalk(double motionX, double motionZ) {
+      double offset = 0.05;
+      double moveX = motionX;
+      double moveZ = motionZ;
+      float fallDist = -mc.player.maxUpStep();
+      if (!mc.player.onGround()) {
+         fallDist = -1.5F;
+      }
 
-        double moveX = motionX;
-        double moveZ = motionZ;
+      while (moveX != 0.0 && mc.level.noCollision(mc.player, mc.player.getBoundingBox().move(moveX, fallDist, 0.0))) {
+         if (moveX < 0.05 && moveX >= -0.05) {
+            moveX = 0.0;
+         } else if (moveX > 0.0) {
+            moveX -= 0.05;
+         } else {
+            moveX += 0.05;
+         }
+      }
 
-        float fallDist = -mc.player.maxUpStep();
-        if (!mc.player.onGround())
-        {
-            fallDist = -1.5f;
-        }
+      while (moveZ != 0.0 && mc.level.noCollision(mc.player, mc.player.getBoundingBox().move(0.0, fallDist, moveZ))) {
+         if (moveZ < 0.05 && moveZ >= -0.05) {
+            moveZ = 0.0;
+         } else if (moveZ > 0.0) {
+            moveZ -= 0.05;
+         } else {
+            moveZ += 0.05;
+         }
+      }
 
-        while (moveX != 0.0 && mc.level.noCollision(mc.player, mc.player.getBoundingBox().move(moveX, fallDist, 0.0)))
-        {
-            if (moveX < offset && moveX >= -offset)
-            {
-                moveX = 0.0;
-            }
-            else if (moveX > 0.0)
-            {
-                moveX -= offset;
-            }
-            else
-            {
-                moveX += offset;
-            }
-        }
+      while (moveX != 0.0 && moveZ != 0.0 && mc.level.noCollision(mc.player, mc.player.getBoundingBox().move(moveX, fallDist, moveZ))) {
+         if (moveX < 0.05 && moveX >= -0.05) {
+            moveX = 0.0;
+         } else if (moveX > 0.0) {
+            moveX -= 0.05;
+         } else {
+            moveX += 0.05;
+         }
 
-        while (moveZ != 0.0 && mc.level.noCollision(mc.player, mc.player.getBoundingBox().move(0.0, fallDist, moveZ)))
-        {
-            if (moveZ < offset && moveZ >= -offset)
-            {
-                moveZ = 0.0;
-            }
-            else if (moveZ > 0.0)
-            {
-                moveZ -= offset;
-            }
-            else
-            {
-                moveZ += offset;
-            }
-        }
+         if (moveZ < 0.05 && moveZ >= -0.05) {
+            moveZ = 0.0;
+         } else if (moveZ > 0.0) {
+            moveZ -= 0.05;
+         } else {
+            moveZ += 0.05;
+         }
+      }
 
-        while (moveX != 0.0 && moveZ != 0.0 && mc.level.noCollision(mc.player, mc.player.getBoundingBox().move(moveX, fallDist, moveZ)))
-        {
-            if (moveX < offset && moveX >= -offset)
-            {
-                moveX = 0.0;
-            }
-            else if (moveX > 0.0)
-            {
-                moveX -= offset;
-            }
-            else
-            {
-                moveX += offset;
-            }
+      return new Vec2((float)moveX, (float)moveZ);
+   }
 
-            if (moveZ < offset && moveZ >= -offset)
-            {
-                moveZ = 0.0;
-            }
-            else if (moveZ > 0.0)
-            {
-                moveZ -= offset;
-            }
-            else
-            {
-                moveZ += offset;
-            }
-        }
+   public static float getYawOffset(Input input, float rotationYaw) {
+      if (input.forwardImpulse < 0.0F) {
+         rotationYaw += 180.0F;
+      }
 
-        return new Vec2((float) moveX, (float) moveZ);
+      float forward = 1.0F;
+      if (input.forwardImpulse < 0.0F) {
+         forward = -0.5F;
+      } else if (input.forwardImpulse > 0.0F) {
+         forward = 0.5F;
+      }
 
-    }
+      float strafe = input.leftImpulse;
+      if (strafe > 0.0F) {
+         rotationYaw -= 90.0F * forward;
+      }
 
-    public static float getYawOffset(Input input, float rotationYaw)
-    {
-        if (input.forwardImpulse < 0.0f) rotationYaw += 180.0f;
+      if (strafe < 0.0F) {
+         rotationYaw += 90.0F * forward;
+      }
 
-        float forward = 1.0f;
-        if (input.forwardImpulse < 0.0f)
-        {
-            forward = -0.5f;
-        }
-        else if (input.forwardImpulse > 0.0f)
-        {
-            forward = 0.5f;
-        }
-
-        float strafe = input.leftImpulse;
-        if (strafe > 0.0f) rotationYaw -= 90.0f * forward;
-        if (strafe < 0.0f) rotationYaw += 90.0f * forward;
-        return rotationYaw;
-    }
+      return rotationYaw;
+   }
 }

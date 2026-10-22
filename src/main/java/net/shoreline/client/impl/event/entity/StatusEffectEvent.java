@@ -5,43 +5,33 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.shoreline.eventbus.event.Event;
 
-public class StatusEffectEvent extends Event
-{
+public class StatusEffectEvent extends Event {
+   private final MobEffectInstance statusEffectInstance;
 
-    private final MobEffectInstance statusEffectInstance;
+   public StatusEffectEvent(MobEffectInstance statusEffectInstance) {
+      this.statusEffectInstance = statusEffectInstance;
+   }
 
-    public StatusEffectEvent(MobEffectInstance statusEffectInstance)
-    {
-        this.statusEffectInstance = statusEffectInstance;
-    }
+   public MobEffectInstance getStatusEffect() {
+      return this.statusEffectInstance;
+   }
 
-    public MobEffectInstance getStatusEffect()
-    {
-        return statusEffectInstance;
-    }
+   public static class Add extends StatusEffectEvent {
+      public Add(MobEffectInstance statusEffectInstance) {
+         super(statusEffectInstance);
+      }
+   }
 
-    public static class Add extends StatusEffectEvent
-    {
+   public static class Remove extends StatusEffectEvent {
+      private final Holder<MobEffect> type;
 
-        public Add(MobEffectInstance statusEffectInstance)
-        {
-            super(statusEffectInstance);
-        }
-    }
+      public Remove(Holder<MobEffect> type) {
+         super(null);
+         this.type = type;
+      }
 
-    public static class Remove extends StatusEffectEvent
-    {
-        private final Holder<MobEffect> type;
-
-        public Remove(Holder<MobEffect> type)
-        {
-            super(null);
-            this.type = type;
-        }
-
-        public Holder<MobEffect> getType()
-        {
-            return type;
-        }
-    }
+      public Holder<MobEffect> getType() {
+         return this.type;
+      }
+   }
 }

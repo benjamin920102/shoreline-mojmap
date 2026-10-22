@@ -6,21 +6,17 @@ import net.shoreline.client.Shoreline;
 import net.shoreline.client.api.command.Command;
 import net.shoreline.client.util.chat.ChatUtil;
 
-public class SaveCommand extends Command
-{
-    public SaveCommand()
-    {
-        super("Save", "Saves the current config", literal("save"));
-    }
+public class SaveCommand extends Command {
+   public SaveCommand() {
+      super("Save", "Saves the current config", literal("save"));
+   }
 
-    @Override
-    public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder)
-    {
-        builder.executes(c ->
-        {
-            Shoreline.CONFIG.saveClientModules();
-            ChatUtil.clientSendMessage("Saved client config!");
-            return 1;
-        });
-    }
+   @Override
+   public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
+      builder.executes(c -> {
+         Shoreline.CONFIG.saveClientModules();
+         ChatUtil.clientSendMessage("Saved client config!");
+         return 1;
+      });
+   }
 }

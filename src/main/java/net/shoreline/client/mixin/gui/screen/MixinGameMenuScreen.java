@@ -8,17 +8,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(PauseScreen.class)
-public class MixinGameMenuScreen
-{
-    @Inject(method = "onDisconnect", at = @At(value = "HEAD"), cancellable = true)
-    private void hookDisconnect(CallbackInfo ci)
-    {
-        MenuDisconnectEvent menuDisconnectEvent = new MenuDisconnectEvent();
-        EventBus.INSTANCE.dispatch(menuDisconnectEvent);
-        if (menuDisconnectEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+@Mixin({PauseScreen.class})
+public class MixinGameMenuScreen {
+   @Inject(
+      method = {"onDisconnect()V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookDisconnect(CallbackInfo ci) {
+      MenuDisconnectEvent menuDisconnectEvent = new MenuDisconnectEvent();
+      EventBus.INSTANCE.dispatch(menuDisconnectEvent);
+      if (menuDisconnectEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 }

@@ -1,30 +1,24 @@
 package net.shoreline.client.impl.event.world;
 
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Entity.RemovalReason;
 import net.shoreline.client.util.Globals;
 import net.shoreline.eventbus.event.Event;
 
-public class RemoveEntityEvent extends Event implements Globals
-{
-    private final Entity entity;
-    private final Entity.RemovalReason removalReason;
+public class RemoveEntityEvent extends Event implements Globals {
+   private final Entity entity;
+   private final RemovalReason removalReason;
 
-    public RemoveEntityEvent(Entity entity, Entity.RemovalReason removalReason)
-    {
-        this.entity = entity;
-        this.removalReason = removalReason;
-    }
+   public RemoveEntityEvent(Entity entity, RemovalReason removalReason) {
+      this.entity = entity;
+      this.removalReason = removalReason;
+   }
 
-    /**
-     * @return
-     */
-    public Entity getEntity()
-    {
-        return entity;
-    }
+   public Entity getEntity() {
+      return this.entity;
+   }
 
-    public Entity.RemovalReason getRemovalReason()
-    {
-        return removalReason;
-    }
+   public RemovalReason getRemovalReason() {
+      return this.removalReason;
+   }
 }

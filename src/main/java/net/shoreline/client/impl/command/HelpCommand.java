@@ -7,51 +7,31 @@ import net.shoreline.client.api.command.CommandArgumentType;
 import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.chat.ChatUtil;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class HelpCommand extends Command
-{
+public class HelpCommand extends Command {
+   public HelpCommand() {
+      super("Help", "Displays command functionality", literal("help"));
+   }
 
-    /**
-     *
-     */
-    public HelpCommand()
-    {
-        super("Help", "Displays command functionality", literal("help"));
-    }
+   private static String toHelpMessage(Command command) {
+      return String.format("%s %s- %s", command.getName(), command.getUsage(), command.getDescription());
+   }
 
-    /**
-     * @param command
-     * @return
-     */
-    private static String toHelpMessage(Command command)
-    {
-        return String.format("%s %s- %s", command.getName(),
-                command.getUsage(), command.getDescription());
-    }
+   @Override
+   public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
+      ((LiteralArgumentBuilder)builder.then(argument("command", CommandArgumentType.command()).executes(c -> {
+         Command command = CommandArgumentType.getCommand(c, "command");
+         ChatUtil.clientSendMessage(toHelpMessage(command));
+         return 1;
+      }))).executes(c -> {
+         ChatUtil.clientSendMessageRaw("§s[Commands Help]");
 
-    @Override
-    public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder)
-    {
-        builder.then(argument("command", CommandArgumentType.command()).executes(c ->
-        {
-            final Command command = CommandArgumentType.getCommand(c, "command");
-            ChatUtil.clientSendMessage(toHelpMessage(command));
-            return 1;
-        })).executes(c ->
-        {
-            ChatUtil.clientSendMessageRaw("§s[Commands Help]");
-            for (Command c1 : Managers.COMMAND.getCommands())
-            {
-                if (c1 instanceof ModuleCommand)
-                {
-                    continue;
-                }
-                ChatUtil.clientSendMessageRaw(toHelpMessage(c1));
+         for (Command c1 : Managers.COMMAND.getCommands()) {
+            if (!(c1 instanceof ModuleCommand)) {
+               ChatUtil.clientSendMessageRaw(toHelpMessage(c1));
             }
-            return 1;
-        });
-    }
+         }
+
+         return 1;
+      });
+   }
 }

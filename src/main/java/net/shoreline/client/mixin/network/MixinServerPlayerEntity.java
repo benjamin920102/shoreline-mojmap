@@ -9,13 +9,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ServerPlayer.class)
-public class MixinServerPlayerEntity
-{
-    @Inject(method = "triggerDimensionChangeTriggers", at = @At(value = "HEAD"))
-    private void hookMoveToWorld(ServerLevel origin, CallbackInfo ci)
-    {
-        LoadWorldEvent loadWorldEvent = new LoadWorldEvent();
-        EventBus.INSTANCE.dispatch(loadWorldEvent);
-    }
+@Mixin({ServerPlayer.class})
+public class MixinServerPlayerEntity {
+   @Inject(
+      method = {"triggerDimensionChangeTriggers(Lnet/minecraft/server/level/ServerLevel;)V"},
+      at = {@At("HEAD")}
+   )
+   private void hookMoveToWorld(ServerLevel origin, CallbackInfo ci) {
+      LoadWorldEvent loadWorldEvent = new LoadWorldEvent();
+      EventBus.INSTANCE.dispatch(loadWorldEvent);
+   }
 }

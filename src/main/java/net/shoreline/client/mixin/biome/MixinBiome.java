@@ -12,84 +12,94 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(Biome.class)
-public class MixinBiome
-{
+@Mixin({Biome.class})
+public class MixinBiome {
+   @Shadow
+   @Final
+   private BiomeSpecialEffects specialEffects;
 
-    @Shadow
-    @Final
-    private BiomeSpecialEffects specialEffects;
+   @Inject(
+      method = {"getFogColor()I"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookGetFogColor(CallbackInfoReturnable<Integer> cir) {
+      SkyboxEvent.Fog skyboxEvent = new SkyboxEvent.Fog(0.0F);
+      EventBus.INSTANCE.dispatch(skyboxEvent);
+      if (skyboxEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(skyboxEvent.getRGB());
+      }
+   }
 
-    @Inject(method = "getFogColor", at = @At(value = "HEAD"), cancellable = true)
-    private void hookGetFogColor(CallbackInfoReturnable<Integer> cir)
-    {
-        SkyboxEvent.Fog skyboxEvent = new SkyboxEvent.Fog(0.0f);
-        EventBus.INSTANCE.dispatch(skyboxEvent);
-        if (skyboxEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(skyboxEvent.getRGB());
-        }
-    }
+   @Inject(
+      method = {"getWaterColor()I"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookGetWaterColor(CallbackInfoReturnable<Integer> cir) {
+      BiomeColorEvent.Water waterEvent = new BiomeColorEvent.Water();
+      EventBus.INSTANCE.dispatch(waterEvent);
+      if (waterEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(waterEvent.getColor());
+      }
+   }
 
-    @Inject(method = "getWaterColor", at = @At(value = "HEAD"), cancellable = true)
-    private void hookGetWaterColor(CallbackInfoReturnable<Integer> cir)
-    {
-        BiomeColorEvent.Water waterEvent = new BiomeColorEvent.Water();
-        EventBus.INSTANCE.dispatch(waterEvent);
-        if (waterEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(waterEvent.getColor());
-        }
-    }
+   @Inject(
+      method = {"getWaterFogColor()I"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookGetWaterFogColor(CallbackInfoReturnable<Integer> cir) {
+      BiomeColorEvent.Water waterEvent = new BiomeColorEvent.Water();
+      EventBus.INSTANCE.dispatch(waterEvent);
+      if (waterEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(waterEvent.getColor());
+      }
+   }
 
-    @Inject(method = "getWaterFogColor", at = @At(value = "HEAD"), cancellable = true)
-    private void hookGetWaterFogColor(CallbackInfoReturnable<Integer> cir)
-    {
-        BiomeColorEvent.Water waterEvent = new BiomeColorEvent.Water();
-        EventBus.INSTANCE.dispatch(waterEvent);
-        if (waterEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(waterEvent.getColor());
-        }
-    }
+   @Inject(
+      method = {"getGrassColor(DD)I"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookGetGrassColorAt(double x, double z, CallbackInfoReturnable<Integer> cir) {
+      BiomeColorEvent.Grass grassEvent = new BiomeColorEvent.Grass();
+      EventBus.INSTANCE.dispatch(grassEvent);
+      if (grassEvent.isCanceled()) {
+         cir.cancel();
+         int i = this.specialEffects.getGrassColorModifier().modifyColor(x, z, grassEvent.getColor());
+         cir.setReturnValue(i);
+      }
+   }
 
-    @Inject(method = "getGrassColor", at = @At(value = "HEAD"), cancellable = true)
-    private void hookGetGrassColorAt(double x, double z, CallbackInfoReturnable<Integer> cir)
-    {
-        BiomeColorEvent.Grass grassEvent = new BiomeColorEvent.Grass();
-        EventBus.INSTANCE.dispatch(grassEvent);
-        if (grassEvent.isCanceled())
-        {
-            cir.cancel();
-            int i = specialEffects.getGrassColorModifier().modifyColor(x, z, grassEvent.getColor());
-            cir.setReturnValue(i);
-        }
-    }
+   @Inject(
+      method = {"getGrassColorFromTexture()I"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookGetDefaultGrassColor(CallbackInfoReturnable<Integer> cir) {
+      BiomeColorEvent.Grass grassEvent = new BiomeColorEvent.Grass();
+      EventBus.INSTANCE.dispatch(grassEvent);
+      if (grassEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(grassEvent.getColor());
+      }
+   }
 
-    @Inject(method = "getGrassColorFromTexture", at = @At(value = "HEAD"), cancellable = true)
-    private void hookGetDefaultGrassColor(CallbackInfoReturnable<Integer> cir)
-    {
-        BiomeColorEvent.Grass grassEvent = new BiomeColorEvent.Grass();
-        EventBus.INSTANCE.dispatch(grassEvent);
-        if (grassEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(grassEvent.getColor());
-        }
-    }
-
-    @Inject(method = "getFoliageColor", at = @At(value = "HEAD"), cancellable = true)
-    private void hookGetFoliageColor(CallbackInfoReturnable<Integer> cir)
-    {
-        BiomeColorEvent.Foliage foliageEvent = new BiomeColorEvent.Foliage();
-        EventBus.INSTANCE.dispatch(foliageEvent);
-        if (foliageEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(foliageEvent.getColor());
-        }
-    }
+   @Inject(
+      method = {"getFoliageColor()I"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookGetFoliageColor(CallbackInfoReturnable<Integer> cir) {
+      BiomeColorEvent.Foliage foliageEvent = new BiomeColorEvent.Foliage();
+      EventBus.INSTANCE.dispatch(foliageEvent);
+      if (foliageEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(foliageEvent.getColor());
+      }
+   }
 }

@@ -5,15 +5,13 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(RenderStateShard.class)
-public interface AccessorRenderPhase
-{
+@Mixin({RenderStateShard.class})
+public interface AccessorRenderPhase {
+   @Mutable
+   @Accessor("setupState")
+   void hookSetBeginAction(Runnable var1);
 
-    @Mutable
-    @Accessor("setupState")
-    void hookSetBeginAction(Runnable runnable);
-
-    @Mutable
-    @Accessor("clearState")
-    void hookSetEndAction(Runnable runnable);
+   @Mutable
+   @Accessor("clearState")
+   void hookSetEndAction(Runnable var1);
 }

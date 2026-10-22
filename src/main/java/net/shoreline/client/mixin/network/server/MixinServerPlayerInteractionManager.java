@@ -9,17 +9,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ServerPlayerGameMode.class)
-public class MixinServerPlayerInteractionManager
-{
-    @Inject(method = "destroyAndAck", at = @At(value = "HEAD"), cancellable = true)
-    private void hookFinishMining(BlockPos pos, int sequence, String reason, CallbackInfo ci)
-    {
-        FinishMiningServerEvent finishMiningServerEvent = new FinishMiningServerEvent();
-        EventBus.INSTANCE.dispatch(finishMiningServerEvent);
-        if (finishMiningServerEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+@Mixin({ServerPlayerGameMode.class})
+public class MixinServerPlayerInteractionManager {
+   @Inject(
+      method = {"destroyAndAck(Lnet/minecraft/core/BlockPos;ILjava/lang/String;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookFinishMining(BlockPos pos, int sequence, String reason, CallbackInfo ci) {
+      FinishMiningServerEvent finishMiningServerEvent = new FinishMiningServerEvent();
+      EventBus.INSTANCE.dispatch(finishMiningServerEvent);
+      if (finishMiningServerEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 }

@@ -9,43 +9,28 @@ import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-/**
- * @author linus
- * @see Minecraft
- * @since 1.0
- */
-@Mixin(Minecraft.class)
-public interface AccessorMinecraftClient
-{
-    /**
-     * @param itemUseCooldown
-     */
-    @Accessor("rightClickDelay")
-    void hookSetItemUseCooldown(int itemUseCooldown);
+@Mixin({Minecraft.class})
+public interface AccessorMinecraftClient {
+   @Accessor("rightClickDelay")
+   void hookSetItemUseCooldown(int var1);
 
-    /**
-     * @return
-     */
-    @Accessor("rightClickDelay")
-    int hookGetItemUseCooldown();
+   @Accessor("rightClickDelay")
+   int hookGetItemUseCooldown();
 
-    /**
-     * @param attackCooldown
-     */
-    @Accessor("missTime")
-    void hookSetAttackCooldown(int attackCooldown);
+   @Accessor("missTime")
+   void hookSetAttackCooldown(int var1);
 
-    @Invoker("startUseItem")
-    void hookDoItemUse();
+   @Invoker("startUseItem")
+   void hookDoItemUse();
 
-    @Accessor("user")
-    @Final
-    @Mutable
-    void setSession(User session);
+   @Accessor("user")
+   @Final
+   @Mutable
+   void setSession(User var1);
 
-    @Accessor("level")
-    void hookSetWorld(ClientLevel world);
+   @Accessor("level")
+   void hookSetWorld(ClientLevel var1);
 
-    @Accessor("clientLevelTeardownInProgress")
-    void hookSetDisconnecting(boolean disconnecting);
+   @Accessor("clientLevelTeardownInProgress")
+   void hookSetDisconnecting(boolean var1);
 }

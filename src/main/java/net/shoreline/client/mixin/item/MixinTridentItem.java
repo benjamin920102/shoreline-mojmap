@@ -11,8 +11,8 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ThrownTrident;
+import net.minecraft.world.entity.projectile.AbstractArrow.Pickup;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
@@ -30,105 +30,98 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(TridentItem.class)
-public abstract class MixinTridentItem implements Globals
-{
+@Mixin({TridentItem.class})
+public abstract class MixinTridentItem implements Globals {
+   @Shadow
+   public abstract int getUseDuration(ItemStack var1, LivingEntity var2);
 
-    @Shadow
-    public abstract int getUseDuration(ItemStack stack, LivingEntity user);
+   @Shadow
+   protected static boolean isTooDamagedToUse(ItemStack stack) {
+      return false;
+   }
 
-    @Shadow
-    protected static boolean isTooDamagedToUse(ItemStack stack)
-    {
-        return false;
-    }
-
-    @Inject(method = "use", at = @At(value = "HEAD"), cancellable = true)
-    private void hookUse(Level world, Player user, InteractionHand hand, CallbackInfoReturnable<InteractionResultHolder<ItemStack>> cir)
-    {
-        TridentWaterEvent tridentWaterEvent = new TridentWaterEvent();
-        EventBus.INSTANCE.dispatch(tridentWaterEvent);
-        if (tridentWaterEvent.isCanceled())
-        {
-            cir.cancel();
-            ItemStack itemStack = user.getItemInHand(hand);
-            if (itemStack.getDamageValue() >= itemStack.getMaxDamage() - 1)
-            {
-                cir.setReturnValue(InteractionResultHolder.fail(itemStack));
-                return;
-            }
-            user.startUsingItem(hand);
-            cir.setReturnValue(InteractionResultHolder.consume(itemStack));
-        }
-    }
-
-    @Inject(method = "releaseUsing", at = @At(value = "HEAD"), cancellable = true)
-    private void hookOnStoppedUsing(ItemStack stack, Level world, LivingEntity user, int remainingUseTicks, CallbackInfo ci)
-    {
-        if (!(user instanceof Player playerEntity))
-        {
+   @Inject(
+      method = {"use(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResultHolder;"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookUse(Level world, Player user, InteractionHand hand, CallbackInfoReturnable<InteractionResultHolder<ItemStack>> cir) {
+      TridentWaterEvent tridentWaterEvent = new TridentWaterEvent();
+      EventBus.INSTANCE.dispatch(tridentWaterEvent);
+      if (tridentWaterEvent.isCanceled()) {
+         cir.cancel();
+         ItemStack itemStack = user.getItemInHand(hand);
+         if (itemStack.getDamageValue() >= itemStack.getMaxDamage() - 1) {
+            cir.setReturnValue(InteractionResultHolder.fail(itemStack));
             return;
-        }
-        int var6 = this.getUseDuration(stack, user) - remainingUseTicks;
-        TridentPullbackEvent tridentPullbackEvent = new TridentPullbackEvent();
-        EventBus.INSTANCE.dispatch(tridentPullbackEvent);
-        if (!tridentPullbackEvent.isCanceled() && var6 < 10)
-        {
-            return;
-        }
-        TridentWaterEvent tridentWaterEvent = new TridentWaterEvent();
-        EventBus.INSTANCE.dispatch(tridentWaterEvent);
-        if (tridentWaterEvent.isCanceled())
-        {
-            ci.cancel();
-            if (var6 >= 10)
-            {
-                float f = EnchantmentHelper.getTridentSpinAttackStrength(stack, playerEntity);
-                if (!(f > 0.0F) || playerEntity.isInWaterOrRain()) {
-                    if (!isTooDamagedToUse(stack)) {
-                        Holder<SoundEvent> registryEntry = (Holder)EnchantmentHelper.pickHighestLevel(stack, EnchantmentEffectComponents.TRIDENT_SOUND).orElse(SoundEvents.TRIDENT_THROW);
-                        if (!world.isClientSide) {
-                            stack.hurtAndBreak(1, playerEntity, LivingEntity.getSlotForHand(user.getUsedItemHand()));
-                            if (f == 0.0F) {
-                                ThrownTrident tridentEntity = new ThrownTrident(world, playerEntity, stack);
-                                tridentEntity.shootFromRotation(playerEntity, playerEntity.getXRot(), playerEntity.getYRot(), 0.0F, 2.5F, 1.0F);
-                                if (playerEntity.hasInfiniteMaterials()) {
-                                    tridentEntity.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
-                                }
+         }
 
-                                world.addFreshEntity(tridentEntity);
-                                world.playSound((Player)null, tridentEntity, (SoundEvent)registryEntry.value(), SoundSource.PLAYERS, 1.0F, 1.0F);
-                                if (!playerEntity.hasInfiniteMaterials()) {
-                                    playerEntity.getInventory().removeItem(stack);
-                                }
-                            }
+         user.startUsingItem(hand);
+         cir.setReturnValue(InteractionResultHolder.consume(itemStack));
+      }
+   }
+
+   @Inject(
+      method = {"releaseUsing(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;I)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookOnStoppedUsing(ItemStack stack, Level world, LivingEntity user, int remainingUseTicks, CallbackInfo ci) {
+      if (user instanceof Player playerEntity) {
+         int var6 = this.getUseDuration(stack, user) - remainingUseTicks;
+         TridentPullbackEvent tridentPullbackEvent = new TridentPullbackEvent();
+         EventBus.INSTANCE.dispatch(tridentPullbackEvent);
+         if (tridentPullbackEvent.isCanceled() || var6 >= 10) {
+            TridentWaterEvent tridentWaterEvent = new TridentWaterEvent();
+            EventBus.INSTANCE.dispatch(tridentWaterEvent);
+            if (tridentWaterEvent.isCanceled()) {
+               ci.cancel();
+               if (var6 >= 10) {
+                  float f = EnchantmentHelper.getTridentSpinAttackStrength(stack, playerEntity);
+                  if ((!(f > 0.0F) || playerEntity.isInWaterOrRain()) && !isTooDamagedToUse(stack)) {
+                     Holder<SoundEvent> registryEntry = EnchantmentHelper.pickHighestLevel(stack, EnchantmentEffectComponents.TRIDENT_SOUND)
+                        .orElse(SoundEvents.TRIDENT_THROW);
+                     if (!world.isClientSide) {
+                        stack.hurtAndBreak(1, playerEntity, LivingEntity.getSlotForHand(user.getUsedItemHand()));
+                        if (f == 0.0F) {
+                           ThrownTrident tridentEntity = new ThrownTrident(world, playerEntity, stack);
+                           tridentEntity.shootFromRotation(playerEntity, playerEntity.getXRot(), playerEntity.getYRot(), 0.0F, 2.5F, 1.0F);
+                           if (playerEntity.hasInfiniteMaterials()) {
+                              tridentEntity.pickup = Pickup.CREATIVE_ONLY;
+                           }
+
+                           world.addFreshEntity(tridentEntity);
+                           world.playSound((Player)null, tridentEntity, registryEntry.value(), SoundSource.PLAYERS, 1.0F, 1.0F);
+                           if (!playerEntity.hasInfiniteMaterials()) {
+                              playerEntity.getInventory().removeItem(stack);
+                           }
+                        }
+                     }
+
+                     playerEntity.awardStat(Stats.ITEM_USED.get((TridentItem)(Object)this));
+                     if (f > 0.0F) {
+                        float g = playerEntity.getYRot();
+                        float h = playerEntity.getXRot();
+                        float j = -Mth.sin(g * (float) (Math.PI / 180.0)) * Mth.cos(h * (float) (Math.PI / 180.0));
+                        float k = -Mth.sin(h * (float) (Math.PI / 180.0));
+                        float l = Mth.cos(g * (float) (Math.PI / 180.0)) * Mth.cos(h * (float) (Math.PI / 180.0));
+                        float m = Mth.sqrt(j * j + k * k + l * l);
+                        j *= f / m;
+                        k *= f / m;
+                        l *= f / m;
+                        playerEntity.push(j, k, l);
+                        playerEntity.startAutoSpinAttack(20, 8.0F, stack);
+                        if (playerEntity.onGround()) {
+                           float n = 1.1999999F;
+                           playerEntity.move(MoverType.SELF, new Vec3(0.0, 1.1999999F, 0.0));
                         }
 
-                        playerEntity.awardStat(Stats.ITEM_USED.get((TridentItem) (Object) this));
-                        if (f > 0.0F)
-                        {
-                            float g = playerEntity.getYRot();
-                            float h = playerEntity.getXRot();
-                            float j = -Mth.sin(g * 0.017453292F) * Mth.cos(h * 0.017453292F);
-                            float k = -Mth.sin(h * 0.017453292F);
-                            float l = Mth.cos(g * 0.017453292F) * Mth.cos(h * 0.017453292F);
-                            float m = Mth.sqrt(j * j + k * k + l * l);
-                            j *= f / m;
-                            k *= f / m;
-                            l *= f / m;
-                            playerEntity.push((double)j, (double)k, (double)l);
-                            playerEntity.startAutoSpinAttack(20, 8.0F, stack);
-                            if (playerEntity.onGround())
-                            {
-                                float n = 1.1999999F;
-                                playerEntity.move(MoverType.SELF, new Vec3(0.0, 1.1999999284744263, 0.0));
-                            }
-
-                            world.playSound((Player)null, playerEntity, (SoundEvent)registryEntry.value(), SoundSource.PLAYERS, 1.0F, 1.0F);
-                        }
-                    }
-                }
+                        world.playSound((Player)null, playerEntity, registryEntry.value(), SoundSource.PLAYERS, 1.0F, 1.0F);
+                     }
+                  }
+               }
             }
-        }
-    }
+         }
+      }
+   }
 }

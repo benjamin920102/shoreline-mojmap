@@ -8,35 +8,33 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/**
- * @author hockeyl8
- * @since 1.0
- */
-@Mixin(WalkAnimationState.class)
-public final class MixinLimbAnimator
-{
+@Mixin({WalkAnimationState.class})
+public final class MixinLimbAnimator {
+   @Inject(
+      method = {"speed()F"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookGetSpeed(CallbackInfoReturnable<Float> cir) {
+      LimbAnimationEvent limbAnimationEvent = new LimbAnimationEvent();
+      EventBus.INSTANCE.dispatch(limbAnimationEvent);
+      if (limbAnimationEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(limbAnimationEvent.getSpeed());
+      }
+   }
 
-    @Inject(method = "speed()F", at = @At("HEAD"), cancellable = true)
-    private void hookGetSpeed(CallbackInfoReturnable<Float> cir)
-    {
-        LimbAnimationEvent limbAnimationEvent = new LimbAnimationEvent();
-        EventBus.INSTANCE.dispatch(limbAnimationEvent);
-        if (limbAnimationEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(limbAnimationEvent.getSpeed());
-        }
-    }
-
-    @Inject(method = "speed(F)F", at = @At("HEAD"), cancellable = true)
-    private void hookGetSpeed(float tickDelta, CallbackInfoReturnable<Float> cir)
-    {
-        LimbAnimationEvent limbAnimationEvent = new LimbAnimationEvent();
-        EventBus.INSTANCE.dispatch(limbAnimationEvent);
-        if (limbAnimationEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(limbAnimationEvent.getSpeed());
-        }
-    }
+   @Inject(
+      method = {"speed(F)F"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookGetSpeed(float tickDelta, CallbackInfoReturnable<Float> cir) {
+      LimbAnimationEvent limbAnimationEvent = new LimbAnimationEvent();
+      EventBus.INSTANCE.dispatch(limbAnimationEvent);
+      if (limbAnimationEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(limbAnimationEvent.getSpeed());
+      }
+   }
 }

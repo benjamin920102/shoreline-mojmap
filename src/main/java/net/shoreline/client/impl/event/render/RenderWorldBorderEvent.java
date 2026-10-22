@@ -4,7 +4,5 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class RenderWorldBorderEvent extends Event
-{
-
+public class RenderWorldBorderEvent extends Event {
 }

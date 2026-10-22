@@ -5,13 +5,9 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(BlockBehaviour.class)
-public interface AccessorAbstractBlock
-{
-    /**
-     * @param slipperiness
-     */
-    @Accessor("friction")
-    @Mutable
-    void setSlipperiness(float slipperiness);
+@Mixin({BlockBehaviour.class})
+public interface AccessorAbstractBlock {
+   @Accessor("friction")
+   @Mutable
+   void setSlipperiness(float var1);
 }

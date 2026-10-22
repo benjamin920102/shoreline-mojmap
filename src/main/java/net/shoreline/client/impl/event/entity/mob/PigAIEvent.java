@@ -5,17 +5,14 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class PigAIEvent extends Event
-{
-    private final Pig pigEntity;
+public class PigAIEvent extends Event {
+   private final Pig pigEntity;
 
-    public PigAIEvent(Pig pigEntity)
-    {
-        this.pigEntity = pigEntity;
-    }
+   public PigAIEvent(Pig pigEntity) {
+      this.pigEntity = pigEntity;
+   }
 
-    public Pig getPigEntity()
-    {
-        return pigEntity;
-    }
+   public Pig getPigEntity() {
+      return this.pigEntity;
+   }
 }

@@ -10,45 +10,32 @@ import net.shoreline.client.impl.event.TickEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 import net.shoreline.eventbus.event.StageEvent;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class AutoWalkModule extends ToggleModule
-{
-    private static AutoWalkModule INSTANCE;
+public class AutoWalkModule extends ToggleModule {
+   private static AutoWalkModule INSTANCE;
+   Config<Boolean> lockConfig = this.register(new BooleanConfig("Lock", "Stops movement when sneaking or jumping", false));
 
-    Config<Boolean> lockConfig = register(new BooleanConfig("Lock", "Stops movement when sneaking or jumping", false));
+   public AutoWalkModule() {
+      super("AutoWalk", "Automatically moves forward", ModuleCategory.MOVEMENT);
+      INSTANCE = this;
+   }
 
-    public AutoWalkModule()
-    {
-        super("AutoWalk", "Automatically moves forward", ModuleCategory.MOVEMENT);
-        INSTANCE = this;
-    }
+   public static AutoWalkModule getInstance() {
+      return INSTANCE;
+   }
 
-    public static AutoWalkModule getInstance()
-    {
-        return INSTANCE;
-    }
+   @Override
+   public void onDisable() {
+      mc.options.keyUp.setDown(false);
+   }
 
-    @Override
-    public void onDisable()
-    {
-        mc.options.keyUp.setDown(false);
-    }
+   @EventListener
+   public void onTick(TickEvent event) {
+      if (event.getStage() == StageEvent.EventStage.PRE) {
+         if (ShorelineMod.isBaritonePresent() && BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing()) {
+            return;
+         }
 
-    @EventListener
-    public void onTick(TickEvent event)
-    {
-        if (event.getStage() == StageEvent.EventStage.PRE)
-        {
-            if (ShorelineMod.isBaritonePresent() && BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing())
-            {
-                return;
-            }
-
-            mc.options.keyUp.setDown(!mc.options.keyShift.isDown()
-                    && (!lockConfig.getValue() || (!mc.options.keyJump.isDown() && mc.player.onGround())));
-        }
-    }
+         mc.options.keyUp.setDown(!mc.options.keyShift.isDown() && (!this.lockConfig.getValue() || !mc.options.keyJump.isDown() && mc.player.onGround()));
+      }
+   }
 }

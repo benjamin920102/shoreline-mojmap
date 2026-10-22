@@ -3,6 +3,7 @@ package net.shoreline.client.impl.module.combat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
@@ -17,55 +18,34 @@ import net.shoreline.client.init.Managers;
 import net.shoreline.eventbus.annotation.EventListener;
 import net.shoreline.eventbus.event.StageEvent;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class AutoBowReleaseModule extends ToggleModule
-{
-    //
-    Config<Boolean> crossbowConfig = register(new BooleanConfig("Crossbow", "Automatically releases crossbow when fully charged", false));
-    Config<Integer> ticksConfig = register(new NumberConfig<>("Ticks", "Ticks before releasing the bow charge", 3, 5, 20));
-    Config<Boolean> tpsSyncConfig = register(new BooleanConfig("TPS-Sync", "Sync bow release to server ticks", false));
+public class AutoBowReleaseModule extends ToggleModule {
+   Config<Boolean> crossbowConfig = this.register(new BooleanConfig("Crossbow", "Automatically releases crossbow when fully charged", false));
+   Config<Integer> ticksConfig = this.register(new NumberConfig<>("Ticks", "Ticks before releasing the bow charge", 3, 5, 20));
+   Config<Boolean> tpsSyncConfig = this.register(new BooleanConfig("TPS-Sync", "Sync bow release to server ticks", false));
 
-    /**
-     *
-     */
-    public AutoBowReleaseModule()
-    {
-        super("AutoBowRelease", "Automatically releases a charged bow",
-                ModuleCategory.COMBAT);
-    }
+   public AutoBowReleaseModule() {
+      super("AutoBowRelease", "Automatically releases a charged bow", ModuleCategory.COMBAT);
+   }
 
-    @EventListener
-    public void onTick(TickEvent event)
-    {
-        if (SelfBowModule.getInstance().isEnabled())
-        {
-            return;
-        }
-        if (event.getStage() == StageEvent.EventStage.POST)
-        {
+   @EventListener
+   public void onTick(TickEvent event) {
+      if (!SelfBowModule.getInstance().isEnabled()) {
+         if (event.getStage() == StageEvent.EventStage.POST) {
             ItemStack mainhand = mc.player.getMainHandItem();
-            if (mainhand.getItem() == Items.BOW)
-            {
-                float off = tpsSyncConfig.getValue() ? 20.0f - Managers.TICK.getTpsAverage() : 0.0f;
-                if (mc.player.getTicksUsingItem() + off >= ticksConfig.getValue())
-                {
-                    Managers.NETWORK.sendPacket(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM,
-                            BlockPos.ZERO, Direction.DOWN));
-                    // Managers.NETWORK.sendSequencedPacket(id -> new PlayerInteractItemC2SPacket(Hand.MAIN_HAND, id));
-                    mc.player.releaseUsingItem();
-                }
+            if (mainhand.getItem() == Items.BOW) {
+               float off = this.tpsSyncConfig.getValue() ? 20.0F - Managers.TICK.getTpsAverage() : 0.0F;
+               if (mc.player.getTicksUsingItem() + off >= this.ticksConfig.getValue().intValue()) {
+                  Managers.NETWORK.sendPacket(new ServerboundPlayerActionPacket(Action.RELEASE_USE_ITEM, BlockPos.ZERO, Direction.DOWN));
+                  mc.player.releaseUsingItem();
+               }
+            } else if (this.crossbowConfig.getValue()
+               && mainhand.getItem() == Items.CROSSBOW
+               && (float)mc.player.getTicksUsingItem() / CrossbowItem.getChargeDuration(mc.player.getMainHandItem(), mc.player) > 1.0F) {
+               Managers.NETWORK.sendPacket(new ServerboundPlayerActionPacket(Action.RELEASE_USE_ITEM, BlockPos.ZERO, Direction.DOWN));
+               mc.player.releaseUsingItem();
+               mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
             }
-            else if (crossbowConfig.getValue() && mainhand.getItem() == Items.CROSSBOW
-                    && mc.player.getTicksUsingItem() / (float) CrossbowItem.getChargeDuration(mc.player.getMainHandItem(), mc.player) > 1.0f)
-            {
-                Managers.NETWORK.sendPacket(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM,
-                        BlockPos.ZERO, Direction.DOWN));
-                mc.player.releaseUsingItem();
-                mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
-            }
-        }
-    }
+         }
+      }
+   }
 }

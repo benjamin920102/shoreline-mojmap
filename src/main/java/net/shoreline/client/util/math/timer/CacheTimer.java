@@ -2,115 +2,49 @@ package net.shoreline.client.util.math.timer;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class CacheTimer implements Timer
-{
-    // The cached time since last reset which indicates the time passed since
-    // the last timer reset
-    private long time;
+public class CacheTimer implements Timer {
+   private long time = System.nanoTime();
+   private long lastResetTime;
 
-    private long lastResetTime;
+   @Override
+   public boolean passed(Number time) {
+      return time.longValue() <= 0L ? true : this.getElapsedTime() > time.longValue();
+   }
 
-    /**
-     * Default constructor which will initialize the time to the current time
-     * which means {@link #passed(Number)} and {@link #passed(Number, TimeUnit)}
-     * will always return <tt>true</tt> initially
-     */
-    public CacheTimer()
-    {
-        this.time = System.nanoTime();
-    }
+   public boolean passed(Number time, TimeUnit unit) {
+      return this.passed(unit.toMillis(time.longValue()));
+   }
 
-    /**
-     * Returns <tt>true</tt> if the time since the last reset has exceeded
-     * the param time.
-     *
-     * @param time The param time in ms
-     * @return <tt>true</tt> if the time since the last reset has exceeded
-     * the param time
-     */
-    @Override
-    public boolean passed(Number time)
-    {
-        if (time.longValue() <= 0)
-        {
-            return true;
-        }
-        return getElapsedTime() > time.longValue();
-    }
+   @Override
+   public long getElapsedTime() {
+      return this.toMillis(System.nanoTime() - this.time);
+   }
 
-    /**
-     * Returns <tt>true</tt> if the time since the last reset has exceeded
-     * the param time which is in the param units.
-     *
-     * @param time The param time
-     * @param unit The unit of the time
-     * @return <tt>true</tt> if the time since the last reset has exceeded
-     * the param time
-     * @see #passed(Number)
-     */
-    public boolean passed(Number time, TimeUnit unit)
-    {
-        return passed(unit.toMillis(time.longValue()));
-    }
+   @Override
+   public void setElapsedTime(Number time) {
+      this.time = time.longValue() == -255L ? 0L : System.nanoTime() - time.longValue();
+   }
 
-    /**
-     * @return
-     */
-    @Override
-    public long getElapsedTime()
-    {
-        return toMillis(System.nanoTime() - time);
-    }
+   public void setDelay(Number delay) {
+      this.time = this.time + delay.longValue();
+   }
 
-    /**
-     * @param time
-     */
-    @Override
-    public void setElapsedTime(Number time)
-    {
-        this.time = time.longValue() == MAX_TIME ? 0 :
-                System.nanoTime() - time.longValue();
-    }
+   public long getElapsedTime(TimeUnit unit) {
+      return unit.convert(this.getElapsedTime(), TimeUnit.MILLISECONDS);
+   }
 
-    public void setDelay(Number delay)
-    {
-        this.time += delay.longValue();
-    }
+   public long getLastResetTime() {
+      return this.lastResetTime;
+   }
 
-    /**
-     * @return
-     */
-    public long getElapsedTime(TimeUnit unit)
-    {
-        return unit.convert(getElapsedTime(), TimeUnit.MILLISECONDS);
-    }
+   @Override
+   public void reset() {
+      long time = System.nanoTime();
+      this.lastResetTime = time - this.time;
+      this.time = time;
+   }
 
-    public long getLastResetTime()
-    {
-        return lastResetTime;
-    }
-
-    /**
-     * Sets the cached time since the last reset to the current time
-     */
-    @Override
-    public void reset()
-    {
-        long time = System.nanoTime();
-        lastResetTime = time - this.time;
-
-        this.time = time;
-    }
-
-    /**
-     * @return
-     */
-    private long toMillis(long nanos)
-    {
-        return nanos / 1000000;
-    }
+   private long toMillis(long nanos) {
+      return nanos / 1000000L;
+   }
 }

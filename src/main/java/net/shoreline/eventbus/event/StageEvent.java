@@ -1,22 +1,18 @@
 package net.shoreline.eventbus.event;
 
-public class StageEvent extends Event
-{
-    private EventStage stage;
+public class StageEvent extends Event {
+   private StageEvent.EventStage stage;
 
-    public EventStage getStage()
-    {
-        return stage;
-    }
+   public StageEvent.EventStage getStage() {
+      return this.stage;
+   }
 
-    public void setStage(EventStage stage)
-    {
-        this.stage = stage;
-    }
+   public void setStage(StageEvent.EventStage stage) {
+      this.stage = stage;
+   }
 
-    public enum EventStage
-    {
-        PRE,
-        POST
-    }
+   public static enum EventStage {
+      PRE,
+      POST;
+   }
 }

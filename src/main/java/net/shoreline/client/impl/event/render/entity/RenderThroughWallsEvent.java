@@ -5,17 +5,14 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class RenderThroughWallsEvent extends Event
-{
-    private LivingEntity entity;
+public class RenderThroughWallsEvent extends Event {
+   private LivingEntity entity;
 
-    public RenderThroughWallsEvent(LivingEntity entity)
-    {
-        this.entity = entity;
-    }
+   public RenderThroughWallsEvent(LivingEntity entity) {
+      this.entity = entity;
+   }
 
-    public LivingEntity getEntity()
-    {
-        return entity;
-    }
+   public LivingEntity getEntity() {
+      return this.entity;
+   }
 }

@@ -5,41 +5,34 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class EmitParticleEvent extends Event
-{
-    private final ParticleOptions effect;
-    private int particleCount;
-    private int particleTime;
+public class EmitParticleEvent extends Event {
+   private final ParticleOptions effect;
+   private int particleCount;
+   private int particleTime;
 
-    public EmitParticleEvent(ParticleOptions effect, int particleCount, int particleTime)
-    {
-        this.effect = effect;
-        this.particleCount = particleCount;
-        this.particleTime = particleTime;
-    }
+   public EmitParticleEvent(ParticleOptions effect, int particleCount, int particleTime) {
+      this.effect = effect;
+      this.particleCount = particleCount;
+      this.particleTime = particleTime;
+   }
 
-    public ParticleOptions getParticleType()
-    {
-        return effect;
-    }
+   public ParticleOptions getParticleType() {
+      return this.effect;
+   }
 
-    public int getParticleCount()
-    {
-        return particleCount;
-    }
+   public int getParticleCount() {
+      return this.particleCount;
+   }
 
-    public void setParticleCount(int particleCount)
-    {
-        this.particleCount = particleCount;
-    }
+   public void setParticleCount(int particleCount) {
+      this.particleCount = particleCount;
+   }
 
-    public int getParticleTime()
-    {
-        return particleTime;
-    }
+   public int getParticleTime() {
+      return this.particleTime;
+   }
 
-    public void setParticleTime(int particleTime)
-    {
-        this.particleTime = particleTime;
-    }
+   public void setParticleTime(int particleTime) {
+      this.particleTime = particleTime;
+   }
 }

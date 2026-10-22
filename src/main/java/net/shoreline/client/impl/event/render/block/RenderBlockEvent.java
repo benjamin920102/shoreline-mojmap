@@ -6,35 +6,25 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
-/**
- * @author linus
- * @see net.minecraft.client.renderer.block.ModelBlockRenderer
- * @since 1.0
- */
 @Cancelable
-public class RenderBlockEvent extends Event
-{
-    private final BlockState state;
-    private final BlockPos pos;
+public class RenderBlockEvent extends Event {
+   private final BlockState state;
+   private final BlockPos pos;
 
-    public RenderBlockEvent(BlockState state, BlockPos pos)
-    {
-        this.state = state;
-        this.pos = pos;
-    }
+   public RenderBlockEvent(BlockState state, BlockPos pos) {
+      this.state = state;
+      this.pos = pos;
+   }
 
-    public BlockState getState()
-    {
-        return state;
-    }
+   public BlockState getState() {
+      return this.state;
+   }
 
-    public BlockPos getPos()
-    {
-        return pos;
-    }
+   public BlockPos getPos() {
+      return this.pos;
+   }
 
-    public Block getBlock()
-    {
-        return state.getBlock();
-    }
+   public Block getBlock() {
+      return this.state.getBlock();
+   }
 }

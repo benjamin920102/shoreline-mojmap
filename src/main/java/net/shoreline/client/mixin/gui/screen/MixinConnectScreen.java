@@ -12,23 +12,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(ConnectScreen.class)
-public class MixinConnectScreen
-{
-    /**
-     * @param client
-     * @param address
-     * @param info
-     * @param ci
-     */
-    @Inject(method = "connect(Lnet/minecraft/client/Minecraft;Lnet/minecraft/client/multiplayer/resolver/ServerAddress;Lnet/minecraft/client/multiplayer/ServerData;Lnet/minecraft/client/multiplayer/TransferState;)V", at = @At(value = "HEAD"))
-    private void onConnect(Minecraft client, ServerAddress address, ServerData info, TransferState cookieStorage, CallbackInfo ci)
-    {
-        ConnectScreenEvent connectScreenEvent = new ConnectScreenEvent(address, info);
-        EventBus.INSTANCE.dispatch(connectScreenEvent);
-    }
+@Mixin({ConnectScreen.class})
+public class MixinConnectScreen {
+   @Inject(
+      method = {"connect(Lnet/minecraft/client/Minecraft;Lnet/minecraft/client/multiplayer/resolver/ServerAddress;Lnet/minecraft/client/multiplayer/ServerData;Lnet/minecraft/client/multiplayer/TransferState;)V"},
+      at = {@At("HEAD")}
+   )
+   private void onConnect(Minecraft client, ServerAddress address, ServerData info, TransferState cookieStorage, CallbackInfo ci) {
+      ConnectScreenEvent connectScreenEvent = new ConnectScreenEvent(address, info);
+      EventBus.INSTANCE.dispatch(connectScreenEvent);
+   }
 }

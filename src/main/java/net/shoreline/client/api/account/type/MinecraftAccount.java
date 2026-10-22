@@ -3,20 +3,14 @@ package net.shoreline.client.api.account.type;
 import com.google.gson.JsonObject;
 import net.minecraft.client.User;
 
-/**
- * @author xgraza
- * @since 03/31/24
- */
-public interface MinecraftAccount
-{
-    User login();
+public interface MinecraftAccount {
+   User login();
 
-    String username();
+   String username();
 
-    default JsonObject toJSON()
-    {
-        final JsonObject object = new JsonObject();
-        object.addProperty("username", username());
-        return object;
-    }
+   default JsonObject toJSON() {
+      JsonObject object = new JsonObject();
+      object.addProperty("username", this.username());
+      return object;
+   }
 }

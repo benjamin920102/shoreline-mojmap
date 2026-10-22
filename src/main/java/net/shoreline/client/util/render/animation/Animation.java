@@ -1,77 +1,67 @@
 package net.shoreline.client.util.render.animation;
 
-public class Animation
-{
-    private final Easing easing;
-    private float length;
-    private long last = 0L;
-    private boolean state;
+public class Animation {
+   private final Easing easing;
+   private float length;
+   private long last = 0L;
+   private boolean state;
 
-    public Animation(float length)
-    {
-        this(false, length);
-    }
+   public Animation(float length) {
+      this(false, length);
+   }
 
-    public Animation(boolean initial, float length)
-    {
-        this(initial, length, Easing.LINEAR);
-    }
+   public Animation(boolean initial, float length) {
+      this(initial, length, Easing.LINEAR);
+   }
 
-    public Animation(boolean initial, float length, Easing easing)
-    {
-        this.length = length;
-        this.state = initial;
-        this.easing = easing;
-    }
+   public Animation(boolean initial, float length, Easing easing) {
+      this.length = length;
+      this.state = initial;
+      this.easing = easing;
+   }
 
-    public void setState(boolean state)
-    {
-        last = (long) (!state ? System.currentTimeMillis() - ((1 - getFactor()) * length) : System.currentTimeMillis() - (getFactor() * length));
-        this.state = state;
-    }
+   public void setState(boolean state) {
+      this.last = (long)(
+         !state ? System.currentTimeMillis() - (1.0 - this.getFactor()) * this.length : System.currentTimeMillis() - this.getFactor() * this.length
+      );
+      this.state = state;
+   }
 
-    public boolean getState()
-    {
-        return state;
-    }
+   public boolean getState() {
+      return this.state;
+   }
 
-    public double getFactor()
-    {
-        return easing.ease(getLinearFactor());
-    }
+   public double getFactor() {
+      return this.easing.ease(this.getLinearFactor());
+   }
 
-    public double getLinearFactor()
-    {
-        return state ? clamp(((System.currentTimeMillis() - last) / length)) : clamp((1 - (System.currentTimeMillis() - last) / length));
-    }
+   public double getLinearFactor() {
+      return this.state
+         ? this.clamp((float)(System.currentTimeMillis() - this.last) / this.length)
+         : this.clamp(1.0F - (float)(System.currentTimeMillis() - this.last) / this.length);
+   }
 
-    public double getCurrent()
-    {
-        return 1 + ((2 - 1)) * getFactor();
-    }
+   public double getCurrent() {
+      return 1.0 + 1.0 * this.getFactor();
+   }
 
-    private double clamp(double in)
-    {
-        return in < 0 ? 0 : Math.min(in, 1);
-    }
+   private double clamp(double in) {
+      return in < 0.0 ? 0.0 : Math.min(in, 1.0);
+   }
 
-    public double getLength()
-    {
-        return length;
-    }
+   public double getLength() {
+      return this.length;
+   }
 
-    public void setLength(float length)
-    {
-        this.length = length;
-    }
+   public void setLength(float length) {
+      this.length = length;
+   }
 
-    public boolean isFinished()
-    {
-        return !getState() && getFactor() == 0.0 || getState() && getFactor() == 1.0;
-    }
+   public boolean isFinished() {
+      return !this.getState() && this.getFactor() == 0.0 || this.getState() && this.getFactor() == 1.0;
+   }
 
-    public void reset()
-    {
-        last = System.currentTimeMillis();
-    }
+   public void reset() {
+      this.last = System.currentTimeMillis();
+   }
 }

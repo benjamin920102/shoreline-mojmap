@@ -1,47 +1,27 @@
-/*
- * Satin
- * Copyright (C) 2019-2024 Ladysnake
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 3 of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; If not, see <https://www.gnu.org/licenses>.
- */
 package net.shoreline.client.api.render.satin;
 
 import net.minecraft.client.renderer.PostChain;
 import net.shoreline.client.api.render.satin.uniform.SamplerUniformV2;
 import net.shoreline.client.api.render.satin.uniform.UniformFinder;
 
-public interface ManagedShaderEffect extends UniformFinder
-{
+public interface ManagedShaderEffect extends UniformFinder {
+   PostChain getShaderEffect();
 
-    PostChain getShaderEffect();
+   void release();
 
-    void release();
+   void render(float var1);
 
-    void render(float tickDelta);
+   ManagedFramebuffer getTarget(String var1);
 
-    ManagedFramebuffer getTarget(String name);
+   void setUniformValue(String var1, int var2);
 
-    void setUniformValue(String uniformName, int value);
+   void setUniformValue(String var1, float var2);
 
-    void setUniformValue(String uniformName, float value);
+   void setUniformValue(String var1, float var2, float var3);
 
-    void setUniformValue(String uniformName, float value0, float value1);
+   void setUniformValue(String var1, float var2, float var3, float var4);
 
-    void setUniformValue(String uniformName, float value0, float value1, float value2);
+   void setUniformValue(String var1, float var2, float var3, float var4, float var5);
 
-    void setUniformValue(String uniformName, float value0, float value1, float value2, float value3);
-
-    @Override
-    SamplerUniformV2 findSampler(String samplerName);
+   SamplerUniformV2 findSampler(String var1);
 }

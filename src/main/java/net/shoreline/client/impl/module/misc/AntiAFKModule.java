@@ -16,81 +16,66 @@ import net.shoreline.client.util.math.timer.CacheTimer;
 import net.shoreline.client.util.math.timer.Timer;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class AntiAFKModule extends RotationModule
-{
-    //
-    Config<Float> secondsConfig = register(new NumberConfig<>("AFKTime", "The time before attempting actions", 5.0f, 20.0f, 120.0f));
-    Config<Boolean> messageConfig = register(new BooleanConfig("Message", "Messages in chat to prevent AFK kick", true));
-    Config<Boolean> tabCompleteConfig = register(new BooleanConfig("TabComplete", "Uses tab complete in chat to prevent AFK kick", true));
-    Config<Boolean> rotateConfig = register(new BooleanConfig("Rotate", "Rotates the player to prevent AFK kick", true));
-    Config<Boolean> jumpConfig = register(new BooleanConfig("Jump", "Jumps to prevent AFK kick", true));
-    Config<Boolean> autoReplyConfig = register(new BooleanConfig("AutoReply", "Replies to players messaging you in chat", false));
-    Config<String> replyConfig = register(new StringConfig("Reply", "The reply message for AutoReply", "I am currently AFK.", () -> autoReplyConfig.getValue()));
-    Config<Float> delayConfig = register(new NumberConfig<>("Delay", "The delay between actions", 5.0f, 100.0f, 1000.0f));
-    private final Timer afkTimer = new CacheTimer();
-    private final Timer actionTimer = new CacheTimer();
+public class AntiAFKModule extends RotationModule {
+   Config<Float> secondsConfig = this.register(new NumberConfig<>("AFKTime", "The time before attempting actions", 5.0F, 20.0F, 120.0F));
+   Config<Boolean> messageConfig = this.register(new BooleanConfig("Message", "Messages in chat to prevent AFK kick", true));
+   Config<Boolean> tabCompleteConfig = this.register(new BooleanConfig("TabComplete", "Uses tab complete in chat to prevent AFK kick", true));
+   Config<Boolean> rotateConfig = this.register(new BooleanConfig("Rotate", "Rotates the player to prevent AFK kick", true));
+   Config<Boolean> jumpConfig = this.register(new BooleanConfig("Jump", "Jumps to prevent AFK kick", true));
+   Config<Boolean> autoReplyConfig = this.register(new BooleanConfig("AutoReply", "Replies to players messaging you in chat", false));
+   Config<String> replyConfig = this.register(
+      new StringConfig("Reply", "The reply message for AutoReply", "I am currently AFK.", () -> this.autoReplyConfig.getValue())
+   );
+   Config<Float> delayConfig = this.register(new NumberConfig<>("Delay", "The delay between actions", 5.0F, 100.0F, 1000.0F));
+   private final Timer afkTimer = new CacheTimer();
+   private final Timer actionTimer = new CacheTimer();
 
-    /**
-     *
-     */
-    public AntiAFKModule()
-    {
-        super("AntiAFK", "Prevents the player from being kicked for AFK", ModuleCategory.MISCELLANEOUS);
-    }
+   public AntiAFKModule() {
+      super("AntiAFK", "Prevents the player from being kicked for AFK", ModuleCategory.MISCELLANEOUS);
+   }
 
-    @Override
-    public void onEnable()
-    {
-        afkTimer.reset();
-    }
+   @Override
+   public void onEnable() {
+      this.afkTimer.reset();
+   }
 
-    @EventListener
-    public void onGameJoin(GameJoinEvent event)
-    {
-        afkTimer.reset();
-    }
+   @EventListener
+   public void onGameJoin(GameJoinEvent event) {
+      this.afkTimer.reset();
+   }
 
-    @EventListener
-    public void onPlayerTick(PlayerTickEvent event)
-    {
-        for (KeyMapping keyBinding : mc.options.keyMappings)
-        {
-            if (keyBinding.isDown())
-            {
-                afkTimer.reset();
-                break;
-            }
-        }
-        if (afkTimer.passed(secondsConfig.getValue() * 1000) && actionTimer.passed(delayConfig.getValue()))
-        {
-            if (jumpConfig.getValue())
-            {
-                mc.player.jumpFromGround();
-            }
-            if (rotateConfig.getValue())
-            {
-                setRotationClient(mc.player.getYRot() + (RANDOM.nextFloat(90.0f) * (RANDOM.nextBoolean() ? 1.0f : -1.0f)),
-                        mc.player.getXRot() + (RANDOM.nextFloat(90.0f) * (RANDOM.nextBoolean() ? 1.0f : -1.0f)));
-            }
-            actionTimer.reset();
-        }
-    }
+   @EventListener
+   public void onPlayerTick(PlayerTickEvent event) {
+      for (KeyMapping keyBinding : mc.options.keyMappings) {
+         if (keyBinding.isDown()) {
+            this.afkTimer.reset();
+            break;
+         }
+      }
 
-    @EventListener
-    public void onPacketInbound(PacketEvent.Inbound event)
-    {
-        if (event.getPacket() instanceof ClientboundPlayerChatPacket packet
-                && autoReplyConfig.getValue())
-        {
-            String[] words = packet.body().content().split(" ");
-            if (words[1].startsWith("whispers:"))
-            {
-                ChatUtil.serverSendCommand("r [Shoreline] " + replyConfig.getValue());
-            }
-        }
-    }
+      if (this.afkTimer.passed(this.secondsConfig.getValue() * 1000.0F) && this.actionTimer.passed(this.delayConfig.getValue())) {
+         if (this.jumpConfig.getValue()) {
+            mc.player.jumpFromGround();
+         }
+
+         if (this.rotateConfig.getValue()) {
+            this.setRotationClient(
+               mc.player.getYRot() + RANDOM.nextFloat(90.0F) * (RANDOM.nextBoolean() ? 1.0F : -1.0F),
+               mc.player.getXRot() + RANDOM.nextFloat(90.0F) * (RANDOM.nextBoolean() ? 1.0F : -1.0F)
+            );
+         }
+
+         this.actionTimer.reset();
+      }
+   }
+
+   @EventListener
+   public void onPacketInbound(PacketEvent.Inbound event) {
+      if (event.getPacket() instanceof ClientboundPlayerChatPacket packet && this.autoReplyConfig.getValue()) {
+         String[] words = packet.body().content().split(" ");
+         if (words[1].startsWith("whispers:")) {
+            ChatUtil.serverSendCommand("r [Shoreline] " + this.replyConfig.getValue());
+         }
+      }
+   }
 }

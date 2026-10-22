@@ -11,35 +11,20 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(FireworkEntityRenderer.class)
-public class MixinFireworkRocketEntityRenderer
-{
-    /**
-     * @param fireworkRocketEntity
-     * @param f
-     * @param g
-     * @param matrixStack
-     * @param vertexConsumerProvider
-     * @param i
-     * @param ci
-     */
-    @Inject(method = "render(Lnet/minecraft/world/entity/projectile/FireworkRocketEntity;FFLnet/minecraft/client/util/math/ MatrixStack;Lnet/minecraft/client/render/ VertexConsumerProvider;I)V", at = @At(value = "HEAD"),
-            cancellable = true)
-    private void hookRender(FireworkRocketEntity fireworkRocketEntity,
-                            float f, float g, PoseStack matrixStack,
-                            MultiBufferSource vertexConsumerProvider,
-                            int i, CallbackInfo ci)
-    {
-        RenderFireworkRocketEvent renderFireworkRocketEvent =
-                new RenderFireworkRocketEvent();
-        EventBus.INSTANCE.dispatch(renderFireworkRocketEvent);
-        if (renderFireworkRocketEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+@Mixin({FireworkEntityRenderer.class})
+public class MixinFireworkRocketEntityRenderer {
+   @Inject(
+      method = {"render(Lnet/minecraft/entity/projectile/FireworkRocketEntity;FFLnet/minecraft/client/util/math/ MatrixStack;Lnet/minecraft/client/render/ VertexConsumerProvider;I)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookRender(
+      FireworkRocketEntity fireworkRocketEntity, float f, float g, PoseStack matrixStack, MultiBufferSource vertexConsumerProvider, int i, CallbackInfo ci
+   ) {
+      RenderFireworkRocketEvent renderFireworkRocketEvent = new RenderFireworkRocketEvent();
+      EventBus.INSTANCE.dispatch(renderFireworkRocketEvent);
+      if (renderFireworkRocketEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 }

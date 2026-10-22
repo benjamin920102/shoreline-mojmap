@@ -12,7 +12,6 @@ import net.shoreline.client.impl.event.gui.chat.ChatMessageEvent;
 import net.shoreline.client.impl.event.gui.hud.RenderOverlayEvent;
 import net.shoreline.client.impl.event.keyboard.KeyboardInputEvent;
 import net.shoreline.client.impl.event.network.GameJoinEvent;
-
 import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.chat.ChatUtil;
 import net.shoreline.client.util.math.timer.CacheTimer;
@@ -20,126 +19,97 @@ import net.shoreline.client.util.math.timer.Timer;
 import net.shoreline.client.util.render.animation.Animation;
 import net.shoreline.client.util.render.animation.Easing;
 import net.shoreline.eventbus.annotation.EventListener;
-import org.lwjgl.glfw.GLFW;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class ChatModule extends ToggleModule
-{
-    private static ChatModule INSTANCE;
+public class ChatModule extends ToggleModule {
+   private static ChatModule INSTANCE;
+   private boolean ircChat;
+   private boolean notified;
+   private final Timer timer = new CacheTimer();
+   public Config<Boolean> dmsOnly = this.register(new BooleanConfig("DMOnly", "Only receive private messages from IRC", false));
+   private final Animation ircAnimation = new Animation(false, 200.0F, Easing.LINEAR);
 
-    private boolean ircChat;
-    private boolean notified;
-    private final Timer timer = new CacheTimer();
+   public ChatModule() {
+      super("Chat", "Manages the client chat", ModuleCategory.CLIENT);
+      INSTANCE = this;
+   }
 
-    public Config<Boolean> dmsOnly = register(new BooleanConfig("DMOnly", "Only receive private messages from IRC", false));
+   public static ChatModule getInstance() {
+      return INSTANCE;
+   }
 
-    private final Animation ircAnimation = new Animation(false, 200, Easing.LINEAR);
+   @Override
+   public void onEnable() {
+      if (mc.player != null && !this.notified && !this.dmsOnly.getValue()) {
+         ChatUtil.clientSendMessageRaw("§s[Chat]§7 Press ALT in chat to enter IRC!", 107);
+         this.notified = true;
+      }
+   }
 
-    public ChatModule()
-    {
-        super("Chat", "Manages the client chat", ModuleCategory.CLIENT);
-        INSTANCE = this;
-    }
+   @EventListener
+   public void onGameJoin(GameJoinEvent event) {
+      if (!this.dmsOnly.getValue()) {
+         if (!this.notified) {
+            ChatUtil.clientSendMessageRaw("§s[Chat]§7 Press ALT in chat to enter IRC!", 107);
+            this.notified = true;
+         }
+      }
+   }
 
-    public static ChatModule getInstance()
-    {
-        return INSTANCE;
-    }
+   @EventListener
+   public void onKey(KeyboardInputEvent event) {
+      if (!this.dmsOnly.getValue()) {
+         if (this.timer.passed(250)) {
+            if (event.getAction() != 2 && (event.getKeycode() == 342 || event.getKeycode() == 346) && mc.screen instanceof ChatScreen) {
+               this.ircChat = !this.ircChat;
+               this.ircAnimation.setState(this.ircChat);
+               this.timer.reset();
+            }
+         }
+      }
+   }
 
-    @Override
-    public void onEnable()
-    {
-        if (mc.player == null || notified || dmsOnly.getValue())
-        {
-            return;
-        }
-
-        ChatUtil.clientSendMessageRaw("§s[Chat]§7 Press ALT in chat to enter IRC!", 107);
-        notified = true;
-    }
-
-    @EventListener
-    public void onGameJoin(GameJoinEvent event)
-    {
-        if (dmsOnly.getValue())
-        {
-            return;
-        }
-
-        if (notified)
-        {
-            return;
-        }
-        ChatUtil.clientSendMessageRaw("§s[Chat]§7 Press ALT in chat to enter IRC!", 107);
-        notified = true;
-    }
-
-    @EventListener
-    public void onKey(KeyboardInputEvent event)
-    {
-        if (dmsOnly.getValue())
-        {
-            return;
-        }
-
-        if (!timer.passed(250))
-        {
-            return;
-        }
-        if (event.getAction() != GLFW.GLFW_REPEAT && (event.getKeycode() == GLFW.GLFW_KEY_LEFT_ALT
-                || event.getKeycode() == GLFW.GLFW_KEY_RIGHT_ALT) && mc.screen instanceof ChatScreen)
-        {
-            ircChat = !ircChat;
-            ircAnimation.setState(ircChat);
-            timer.reset();
-        }
-    }
-
-    @EventListener(priority = Integer.MIN_VALUE)
-    public void onChatMessage(ChatMessageEvent.Client event)
-    {
-        if (dmsOnly.getValue())
-        {
-            return;
-        }
-
-        if (ircChat)
-        {
-            final String text = event.getMessage().trim();
-            if (text.isEmpty() || text.isBlank() || text.startsWith(Managers.COMMAND.getPrefix())
-                    || ShorelineMod.isBaritonePresent() && text.startsWith(BaritoneAPI.getSettings().prefix.value) || text.startsWith("/"))
-            {
-                return;
+   @EventListener(
+      priority = Integer.MIN_VALUE
+   )
+   public void onChatMessage(ChatMessageEvent.Client event) {
+      if (!this.dmsOnly.getValue()) {
+         if (this.ircChat) {
+            String text = event.getMessage().trim();
+            if (text.isEmpty()
+               || text.isBlank()
+               || text.startsWith(Managers.COMMAND.getPrefix())
+               || ShorelineMod.isBaritonePresent() && text.startsWith(BaritoneAPI.getSettings().prefix.value)
+               || text.startsWith("/")) {
+               return;
             }
 
             event.cancel();
             mc.gui.getChat().addRecentChat(text);
-        }
-    }
+         }
+      }
+   }
 
-    @EventListener
-    public void onRenderOverlay(RenderOverlayEvent.Hotbar event)
-    {
-        if (dmsOnly.getValue())
-        {
-            return;
-        }
-
-        if (mc.screen instanceof ChatScreen && ircAnimation.getFactor() > 0.01)
-        {
+   @EventListener
+   public void onRenderOverlay(RenderOverlayEvent.Hotbar event) {
+      if (!this.dmsOnly.getValue()) {
+         if (mc.screen instanceof ChatScreen && this.ircAnimation.getFactor() > 0.01) {
             float height = mc.getWindow().getGuiScaledHeight();
             float width = mc.getWindow().getGuiScaledWidth();
-            float anim = HUDModule.getInstance().isEnabled() ? HUDModule.getInstance().getChatAnimation() : 1.0f;
-            RenderManager.borderedRect(event.getContext().pose(), 2, (int) height,
-                    width - 4, -16.0f * anim, ColorsModule.getInstance().getRGB((int) (255.0f * ircAnimation.getFactor())), 1.0f);
-        }
-    }
+            float anim = HUDModule.getInstance().isEnabled() ? HUDModule.getInstance().getChatAnimation() : 1.0F;
+            RenderManager.borderedRect(
+               event.getContext().pose(),
+               2.0,
+               (int)height,
+               width - 4.0F,
+               -16.0F * anim,
+               ColorsModule.getInstance().getRGB((int)(255.0 * this.ircAnimation.getFactor())),
+               1.0
+            );
+         }
+      }
+   }
 
-    public boolean isDmsOnly()
-    {
-        return dmsOnly.getValue();
-    }
+   public boolean isDmsOnly() {
+      return this.dmsOnly.getValue();
+   }
 }

@@ -21,90 +21,76 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(EndCrystalRenderer.class)
-public class MixinEndCrystalEntityRenderer
-{
-    //
-    @Shadow
-    @Final
-    private ModelPart cube;
-    //
-    @Shadow
-    @Final
-    private ModelPart glass;
+@Mixin({EndCrystalRenderer.class})
+public class MixinEndCrystalEntityRenderer {
+   @Shadow
+   @Final
+   private ModelPart cube;
+   @Shadow
+   @Final
+   private ModelPart glass;
+   @Shadow
+   @Final
+   private static RenderType RENDER_TYPE;
+   @Shadow
+   @Final
+   private ModelPart base;
+   @Shadow
+   @Final
+   private static float SIN_45;
 
-    @Shadow
-    @Final
-    private static RenderType RENDER_TYPE;
+   @Inject(
+      method = {"render(Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookRender(
+      EndCrystal endCrystalEntity, float f, float g, PoseStack matrixStack, MultiBufferSource vertexConsumerProvider, int i, CallbackInfo ci
+   ) {
+      RenderCrystalEvent renderCrystalEvent = new RenderCrystalEvent(endCrystalEntity, f, g, matrixStack, i, this.cube, this.glass);
+      EventBus.INSTANCE.dispatch(renderCrystalEvent);
+      ci.cancel();
+      if (!renderCrystalEvent.isCanceled()) {
+         matrixStack.pushPose();
+         float h = !renderCrystalEvent.getBounce() ? -1.0F : EndCrystalRenderer.getY(endCrystalEntity, g);
+         float j = (endCrystalEntity.time + g) * renderCrystalEvent.getSpin() * 3.0F;
+         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RENDER_TYPE);
+         matrixStack.pushPose();
+         matrixStack.scale(renderCrystalEvent.getScale(), renderCrystalEvent.getScale(), renderCrystalEvent.getScale());
+         matrixStack.scale(2.0F, 2.0F, 2.0F);
+         matrixStack.translate(0.0F, -0.5F, 0.0F);
+         int k = OverlayTexture.NO_OVERLAY;
+         if (endCrystalEntity.showsBottom()) {
+            this.base.render(matrixStack, vertexConsumer, i, k);
+         }
 
-    @Shadow
-    @Final
-    private ModelPart base;
-
-    @Shadow
-    @Final
-    private static float SIN_45;
-
-    /**
-     * @param endCrystalEntity
-     * @param f
-     * @param g
-     * @param matrixStack
-     * @param vertexConsumerProvider
-     * @param i
-     * @param ci
-     */
-    @Inject(method = "render(Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At(value = "HEAD"), cancellable = true)
-    private void hookRender(EndCrystal endCrystalEntity, float f, float g,
-                            PoseStack matrixStack, MultiBufferSource vertexConsumerProvider,
-                            int i, CallbackInfo ci)
-    {
-        RenderCrystalEvent renderCrystalEvent = new RenderCrystalEvent(endCrystalEntity,
-                f, g, matrixStack, i, cube, glass);
-        // Does it matter if render comes before cancelling?
-        EventBus.INSTANCE.dispatch(renderCrystalEvent);
-        ci.cancel();
-        if (!renderCrystalEvent.isCanceled())
-        {
-            matrixStack.pushPose();
-            float h = !renderCrystalEvent.getBounce() ? -1.0f : EndCrystalRenderer.getY(endCrystalEntity, g);
-            float j = (float) ((endCrystalEntity.time + g) * renderCrystalEvent.getSpin()) * 3.0f;
-            VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RENDER_TYPE);
-            matrixStack.pushPose();
-            matrixStack.scale(renderCrystalEvent.getScale(), renderCrystalEvent.getScale(), renderCrystalEvent.getScale());
-            matrixStack.scale(2.0f, 2.0f, 2.0f);
-            matrixStack.translate(0.0f, -0.5f, 0.0f);
-            int k = OverlayTexture.NO_OVERLAY;
-            if (endCrystalEntity.showsBottom()) {
-                this.base.render(matrixStack, vertexConsumer, i, k);
-            }
-            matrixStack.mulPose(Axis.YP.rotationDegrees(j));
-            matrixStack.translate(0.0f, 1.5f + h / 2.0f, 0.0f);
-            matrixStack.mulPose(new Quaternionf().setAngleAxis(1.0471976f, SIN_45, 0.0f, SIN_45));
-            this.glass.render(matrixStack, vertexConsumer, i, k);
-            float l = 0.875f;
-            matrixStack.scale(0.875f, 0.875f, 0.875f);
-            matrixStack.mulPose(new Quaternionf().setAngleAxis(1.0471976f, SIN_45, 0.0f, SIN_45));
-            matrixStack.mulPose(Axis.YP.rotationDegrees(j));
-            this.glass.render(matrixStack, vertexConsumer, i, k);
-            matrixStack.scale(0.875f, 0.875f, 0.875f);
-            matrixStack.mulPose(new Quaternionf().setAngleAxis(1.0471976f, SIN_45, 0.0f, SIN_45));
-            matrixStack.mulPose(Axis.YP.rotationDegrees(j));
-            this.cube.render(matrixStack, vertexConsumer, i, k);
-            matrixStack.scale(1.0f / renderCrystalEvent.getScale(), 1.0f / renderCrystalEvent.getScale(), 1.0f / renderCrystalEvent.getScale());
-            matrixStack.popPose();
-            matrixStack.popPose();
-            BlockPos blockPos = endCrystalEntity.getBeamTarget();
-            if (blockPos != null) {
-                float m = (float)blockPos.getX() + 0.5f;
-                float n = (float)blockPos.getY() + 0.5f;
-                float o = (float)blockPos.getZ() + 0.5f;
-                float p = (float)((double)m - endCrystalEntity.getX());
-                float q = (float)((double)n - endCrystalEntity.getY());
-                float r = (float)((double)o - endCrystalEntity.getZ());
-                matrixStack.translate(p, q, r);
-                EnderDragonRenderer.renderCrystalBeams(-p, -q + h, -r, g, endCrystalEntity.time, matrixStack, vertexConsumerProvider, i);
-            }
-        }
-    }
+         matrixStack.mulPose(Axis.YP.rotationDegrees(j));
+         matrixStack.translate(0.0F, 1.5F + h / 2.0F, 0.0F);
+         matrixStack.mulPose(new Quaternionf().setAngleAxis((float) (Math.PI / 3), SIN_45, 0.0F, SIN_45));
+         this.glass.render(matrixStack, vertexConsumer, i, k);
+         float l = 0.875F;
+         matrixStack.scale(0.875F, 0.875F, 0.875F);
+         matrixStack.mulPose(new Quaternionf().setAngleAxis((float) (Math.PI / 3), SIN_45, 0.0F, SIN_45));
+         matrixStack.mulPose(Axis.YP.rotationDegrees(j));
+         this.glass.render(matrixStack, vertexConsumer, i, k);
+         matrixStack.scale(0.875F, 0.875F, 0.875F);
+         matrixStack.mulPose(new Quaternionf().setAngleAxis((float) (Math.PI / 3), SIN_45, 0.0F, SIN_45));
+         matrixStack.mulPose(Axis.YP.rotationDegrees(j));
+         this.cube.render(matrixStack, vertexConsumer, i, k);
+         matrixStack.scale(1.0F / renderCrystalEvent.getScale(), 1.0F / renderCrystalEvent.getScale(), 1.0F / renderCrystalEvent.getScale());
+         matrixStack.popPose();
+         matrixStack.popPose();
+         BlockPos blockPos = endCrystalEntity.getBeamTarget();
+         if (blockPos != null) {
+            float m = blockPos.getX() + 0.5F;
+            float n = blockPos.getY() + 0.5F;
+            float o = blockPos.getZ() + 0.5F;
+            float p = (float)(m - endCrystalEntity.getX());
+            float q = (float)(n - endCrystalEntity.getY());
+            float r = (float)(o - endCrystalEntity.getZ());
+            matrixStack.translate(p, q, r);
+            EnderDragonRenderer.renderCrystalBeams(-p, -q + h, -r, g, endCrystalEntity.time, matrixStack, vertexConsumerProvider, i);
+         }
+      }
+   }
 }

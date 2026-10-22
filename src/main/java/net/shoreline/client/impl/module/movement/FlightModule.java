@@ -1,9 +1,11 @@
 package net.shoreline.client.impl.module.movement;
 
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.PosRot;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockBehaviour.BlockStateBase;
 import net.shoreline.client.api.config.Config;
 import net.shoreline.client.api.config.setting.BooleanConfig;
 import net.shoreline.client.api.config.setting.EnumConfig;
@@ -19,228 +21,193 @@ import net.shoreline.client.util.player.MovementUtil;
 import net.shoreline.client.util.string.EnumFormatter;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class FlightModule extends ToggleModule
-{
-    private static FlightModule INSTANCE;
+public class FlightModule extends ToggleModule {
+   private static FlightModule INSTANCE;
+   Config<FlightModule.FlightMode> modeConfig = this.register(
+      new EnumConfig<>("Mode", "The mode for vanilla flight", FlightModule.FlightMode.NORMAL, FlightModule.FlightMode.values())
+   );
+   Config<Float> speedConfig = this.register(new NumberConfig<>("Speed", "The horizontal flight speed", 0.1F, 2.5F, 10.0F));
+   Config<Float> vspeedConfig = this.register(new NumberConfig<>("VerticalSpeed", "The vertical flight speed", 0.1F, 1.0F, 5.0F));
+   Config<FlightModule.AntiKick> antiKickConfig = this.register(
+      new EnumConfig<>("AntiKick", "Prevents vanilla flight detection", FlightModule.AntiKick.NORMAL, FlightModule.AntiKick.values())
+   );
+   Config<Boolean> accelerateConfig = this.register(new BooleanConfig("Accelerate", "Accelerate as you fly", false));
+   Config<Float> accelerateSpeedConfig = this.register(
+      new NumberConfig<>("AccelerateSpeed", "Speed to accelerate as", 0.01F, 0.2F, 1.0F, () -> this.accelerateConfig.getValue())
+   );
+   Config<Float> maxSpeedConfig = this.register(
+      new NumberConfig<>("MaxSpeed", "Max speed to acceleratee to", 1.0F, 5.0F, 10.0F, () -> this.accelerateConfig.getValue())
+   );
+   private double speed;
+   private double lastY;
+   private boolean floating;
+   private int floatingTicks;
+   private boolean modifyY;
 
-    Config<FlightMode> modeConfig = register(new EnumConfig<>("Mode", "The mode for vanilla flight", FlightMode.NORMAL, FlightMode.values()));
-    Config<Float> speedConfig = register(new NumberConfig<>("Speed", "The horizontal flight speed", 0.1f, 2.5f, 10.0f));
-    Config<Float> vspeedConfig = register(new NumberConfig<>("VerticalSpeed", "The vertical flight speed", 0.1f, 1.0f, 5.0f));
-    Config<AntiKick> antiKickConfig = register(new EnumConfig<>("AntiKick", "Prevents vanilla flight detection", AntiKick.NORMAL, AntiKick.values()));
-    Config<Boolean> accelerateConfig = register(new BooleanConfig("Accelerate", "Accelerate as you fly", false));
-    Config<Float> accelerateSpeedConfig = register(new NumberConfig<>("AccelerateSpeed", "Speed to accelerate as", 0.01f, 0.2f, 1.0f, () -> accelerateConfig.getValue()));
-    Config<Float> maxSpeedConfig = register(new NumberConfig<>("MaxSpeed", "Max speed to acceleratee to", 1.0f, 5.0f, 10.0f, () -> accelerateConfig.getValue()));
+   public FlightModule() {
+      super("Flight", "Allows the player to fly in survival", ModuleCategory.MOVEMENT);
+      INSTANCE = this;
+   }
 
-    private double speed;
-    // antikick bs
-    private double lastY;
-    private boolean floating;
-    private int floatingTicks;
-    private boolean modifyY;
+   public static FlightModule getInstance() {
+      return INSTANCE;
+   }
 
-    public FlightModule()
-    {
-        super("Flight", "Allows the player to fly in survival", ModuleCategory.MOVEMENT);
-        INSTANCE = this;
-    }
+   @Override
+   public String getModuleData() {
+      return EnumFormatter.formatEnum(this.modeConfig.getValue());
+   }
 
-    public static FlightModule getInstance()
-    {
-        return INSTANCE;
-    }
+   @Override
+   public void onEnable() {
+      if (this.modeConfig.getValue() == FlightModule.FlightMode.VANILLA) {
+         this.enableVanillaFly();
+      }
 
-    @Override
-    public String getModuleData()
-    {
-        return EnumFormatter.formatEnum(modeConfig.getValue());
-    }
+      this.speed = 0.0;
+   }
 
-    @Override
-    public void onEnable()
-    {
-        if (modeConfig.getValue() == FlightMode.VANILLA)
-        {
-            enableVanillaFly();
-        }
-        speed = 0.0;
-    }
+   @Override
+   public void onDisable() {
+      if (this.modeConfig.getValue() == FlightModule.FlightMode.VANILLA) {
+         this.disableVanillaFly();
+      }
 
-    @Override
-    public void onDisable()
-    {
-        if (modeConfig.getValue() == FlightMode.VANILLA)
-        {
-            disableVanillaFly();
-        }
-        modifyY = false;
-    }
+      this.modifyY = false;
+   }
 
-    @EventListener
-    public void onPlayerTick(PlayerTickEvent event)
-    {
-        if (accelerateConfig.getValue())
-        {
-            if (!MovementUtil.isInputtingMovement() || mc.player.horizontalCollision)
-            {
-                speed = 0.0f;
+   @EventListener
+   public void onPlayerTick(PlayerTickEvent event) {
+      if (this.accelerateConfig.getValue()) {
+         if (!MovementUtil.isInputtingMovement() || mc.player.horizontalCollision) {
+            this.speed = 0.0;
+         }
+
+         this.speed = this.speed + this.accelerateSpeedConfig.getValue().floatValue();
+         if (this.speed > this.maxSpeedConfig.getValue().floatValue()) {
+            this.speed = this.maxSpeedConfig.getValue().floatValue();
+         }
+      } else {
+         this.speed = this.speedConfig.getValue().floatValue();
+      }
+
+      if (DisablerModule.getInstance().grimFireworkCheck()) {
+         if (this.modeConfig.getValue() == FlightModule.FlightMode.VANILLA) {
+            this.disableVanillaFly();
+         }
+      } else {
+         if (this.modeConfig.getValue().equals(FlightModule.FlightMode.VANILLA)) {
+            this.enableVanillaFly();
+            mc.player.getAbilities().setFlyingSpeed((float)(this.speed * 0.05F));
+         } else {
+            this.disableVanillaFly();
+         }
+
+         boolean stopVerticalMovement = false;
+         if (this.floating) {
+            this.floatingTicks++;
+            if (this.floatingTicks >= 20) {
+               if (this.antiKickConfig.getValue() == FlightModule.AntiKick.PACKET) {
+                  this.modifyY = true;
+               } else if (this.antiKickConfig.getValue() == FlightModule.AntiKick.NORMAL) {
+                  mc.player.setPos(mc.player.getX(), mc.player.getY() - 0.0313, mc.player.getZ());
+                  if (this.modeConfig.getValue() == FlightModule.FlightMode.VANILLA) {
+                     this.disableVanillaFly();
+                     Managers.MOVEMENT.setMotionY(0.0);
+                     stopVerticalMovement = true;
+                  }
+               }
+
+               this.floatingTicks = 0;
+               this.floating = false;
             }
-            speed += accelerateSpeedConfig.getValue();
-            if (speed > maxSpeedConfig.getValue())
-            {
-                speed = maxSpeedConfig.getValue();
-            }
-        }
-        else
-        {
-            speed = speedConfig.getValue();
-        }
-        if (DisablerModule.getInstance().grimFireworkCheck())
-        {
-            if (modeConfig.getValue() == FlightMode.VANILLA)
-            {
-                disableVanillaFly();
-            }
-            return;
-        }
-        if (modeConfig.getValue().equals(FlightMode.VANILLA))
-        {
-            enableVanillaFly();
-            mc.player.getAbilities().setFlyingSpeed((float) (speed * 0.05f));
-        }
-        else
-        {
-            disableVanillaFly();
-        }
+         }
 
-        boolean stopVerticalMovement = false;
-        if (floating)
-        {
-            floatingTicks++;
-            // Vanilla fly kick checks every 80 ticks
-            if (floatingTicks >= 20)
-            {
-                if (antiKickConfig.getValue() == AntiKick.PACKET)
-                {
-                    modifyY = true;
-                }
-                else if (antiKickConfig.getValue() == AntiKick.NORMAL)
-                {
-                    mc.player.setPos(mc.player.getX(), mc.player.getY() - 0.0313, mc.player.getZ());
-                    if (modeConfig.getValue() == FlightMode.VANILLA)
-                    {
-                        disableVanillaFly();
-                        Managers.MOVEMENT.setMotionY(0.0);
-                        stopVerticalMovement = true;
-                    }
-                }
-                floatingTicks = 0;
-                floating = false;
-            }
-        }
-
-        if (modeConfig.getValue() == FlightMode.NORMAL)
-        {
+         if (this.modeConfig.getValue() == FlightModule.FlightMode.NORMAL) {
             Managers.MOVEMENT.setMotionY(0.0);
-            if (mc.options.keyJump.isDown() && !stopVerticalMovement)
-            {
-                Managers.MOVEMENT.setMotionY(vspeedConfig.getValue());
+            if (mc.options.keyJump.isDown() && !stopVerticalMovement) {
+               Managers.MOVEMENT.setMotionY(this.vspeedConfig.getValue().floatValue());
+            } else if (mc.options.keyShift.isDown()) {
+               Managers.MOVEMENT.setMotionY(-this.vspeedConfig.getValue());
             }
-            else if (mc.options.keyShift.isDown())
-            {
-                Managers.MOVEMENT.setMotionY(-vspeedConfig.getValue());
-            }
-            speed = Math.max(speed, 0.2873f);
+
+            this.speed = Math.max(this.speed, 0.2873F);
             float forward = mc.player.input.forwardImpulse;
             float strafe = mc.player.input.leftImpulse;
             float yaw = mc.player.getYRot();
-            if (forward == 0.0f && strafe == 0.0f)
-            {
-                Managers.MOVEMENT.setMotionXZ(0.0f, 0.0f);
-                return;
-            }
-            double rx = Math.cos(Math.toRadians(yaw + 90.0f));
-            double rz = Math.sin(Math.toRadians(yaw + 90.0f));
-            Managers.MOVEMENT.setMotionXZ((forward * speed * rx) + (strafe * speed * rz),
-                    (forward * speed * rz) - (strafe * speed * rx));
-        }
-    }
-
-    @EventListener
-    public void onPacketOutbound(PacketEvent.Outbound event)
-    {
-        if (mc.player == null)
-        {
-            return;
-        }
-        if (event.getPacket() instanceof ServerboundMovePlayerPacket packet && antiKickConfig.getValue() != AntiKick.OFF)
-        {
-            final double packetY = packet.getY(Double.NaN);
-            if (!Double.isNaN(packetY))
-            {
-                if (modifyY)
-                {
-                    ((AccessorPlayerMoveC2SPacket) packet).hookSetY(lastY - 0.04);
-                    modifyY = false;
-                    return;
-                }
-                floating = floatingCheck(packet);
-                lastY = packetY;
-                return;
+            if (forward == 0.0F && strafe == 0.0F) {
+               Managers.MOVEMENT.setMotionXZ(0.0, 0.0);
+               return;
             }
 
-            if (modifyY)
-            {
-                ServerboundMovePlayerPacket packet1 = packet.hasRotation() ? new ServerboundMovePlayerPacket.PosRot(mc.player.getX(), mc.player.getY() - 0.04, mc.player.getZ(), mc.player.getYRot(), mc.player.getXRot(), packet.isOnGround()) :
-                        new ServerboundMovePlayerPacket.Pos(mc.player.getX(), mc.player.getY() - 0.04, mc.player.getZ(), packet.isOnGround());
-                event.cancel();
-                Managers.NETWORK.sendQuietPacket(packet1);
-                modifyY = false;
+            double rx = Math.cos(Math.toRadians(yaw + 90.0F));
+            double rz = Math.sin(Math.toRadians(yaw + 90.0F));
+            Managers.MOVEMENT.setMotionXZ(forward * this.speed * rx + strafe * this.speed * rz, forward * this.speed * rz - strafe * this.speed * rx);
+         }
+      }
+   }
+
+   @EventListener
+   public void onPacketOutbound(PacketEvent.Outbound event) {
+      if (mc.player != null) {
+         if (event.getPacket() instanceof ServerboundMovePlayerPacket packet && this.antiKickConfig.getValue() != FlightModule.AntiKick.OFF) {
+            double packetY = packet.getY(Double.NaN);
+            if (!Double.isNaN(packetY)) {
+               if (this.modifyY) {
+                  ((AccessorPlayerMoveC2SPacket)packet).hookSetY(this.lastY - 0.04);
+                  this.modifyY = false;
+                  return;
+               }
+
+               this.floating = this.floatingCheck(packet);
+               this.lastY = packetY;
+               return;
             }
-        }
-    }
 
-    private boolean floatingCheck(ServerboundMovePlayerPacket packet)
-    {
-        double e = Mth.clamp(packet.getY(mc.player.getY()), -2.0E7, 2.0E7);
-        double s = e - lastY;
-        return s >= -0.03125 && !mc.player.verticalCollisionBelow && isEntityOnAir(mc.player);
-    }
+            if (this.modifyY) {
+               ServerboundMovePlayerPacket packet1 = (ServerboundMovePlayerPacket)(packet.hasRotation()
+                  ? new PosRot(mc.player.getX(), mc.player.getY() - 0.04, mc.player.getZ(), mc.player.getYRot(), mc.player.getXRot(), packet.isOnGround())
+                  : new Pos(mc.player.getX(), mc.player.getY() - 0.04, mc.player.getZ(), packet.isOnGround()));
+               event.cancel();
+               Managers.NETWORK.sendQuietPacket(packet1);
+               this.modifyY = false;
+            }
+         }
+      }
+   }
 
-    private boolean isEntityOnAir(Entity entity)
-    {
-        return entity.level().getBlockStates(entity.getBoundingBox().inflate(0.0625).expandTowards(0.0, -0.55, 0.0)).allMatch(BlockBehaviour.BlockStateBase::isAir);
-    }
+   private boolean floatingCheck(ServerboundMovePlayerPacket packet) {
+      double e = Mth.clamp(packet.getY(mc.player.getY()), -2.0E7, 2.0E7);
+      double s = e - this.lastY;
+      return s >= -0.03125 && !mc.player.verticalCollisionBelow && this.isEntityOnAir(mc.player);
+   }
 
-    private void enableVanillaFly()
-    {
-        mc.player.getAbilities().mayfly = true;
-        mc.player.getAbilities().flying = true;
-    }
+   private boolean isEntityOnAir(Entity entity) {
+      return entity.level().getBlockStates(entity.getBoundingBox().inflate(0.0625).expandTowards(0.0, -0.55, 0.0)).allMatch(BlockStateBase::isAir);
+   }
 
-    private void disableVanillaFly()
-    {
-        if (!mc.player.isCreative())
-        {
-            mc.player.getAbilities().mayfly = false;
-        }
-        mc.player.getAbilities().flying = false;
-        mc.player.getAbilities().setFlyingSpeed(0.05f);
-    }
+   private void enableVanillaFly() {
+      mc.player.getAbilities().mayfly = true;
+      mc.player.getAbilities().flying = true;
+   }
 
-    public enum FlightMode
-    {
-        NORMAL,
-        VANILLA
-    }
+   private void disableVanillaFly() {
+      if (!mc.player.isCreative()) {
+         mc.player.getAbilities().mayfly = false;
+      }
 
-    public enum AntiKick
-    {
-        NORMAL,
-        PACKET,
-        OFF
-    }
+      mc.player.getAbilities().flying = false;
+      mc.player.getAbilities().setFlyingSpeed(0.05F);
+   }
+
+   public static enum AntiKick {
+      NORMAL,
+      PACKET,
+      OFF;
+   }
+
+   public static enum FlightMode {
+      NORMAL,
+      VANILLA;
+   }
 }

@@ -13,32 +13,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * @author linus
- * @see SlimeBlock
- * @since 1.0
- */
-@Mixin(SlimeBlock.class)
-public class MixinSlimeBlock implements Globals
-{
-    /**
-     * @param world
-     * @param pos
-     * @param state
-     * @param entity
-     * @param ci
-     */
-    @Inject(method = "stepOn", at = @At(value = "HEAD"),
-            cancellable = true)
-    private void hookOnSteppedOn(Level world, BlockPos pos, BlockState state,
-                                 Entity entity, CallbackInfo ci)
-    {
-        SteppedOnSlimeBlockEvent steppedOnSlimeBlockEvent =
-                new SteppedOnSlimeBlockEvent();
-        EventBus.INSTANCE.dispatch(steppedOnSlimeBlockEvent);
-        if (steppedOnSlimeBlockEvent.isCanceled() && entity == mc.player)
-        {
-            ci.cancel();
-        }
-    }
+@Mixin({SlimeBlock.class})
+public class MixinSlimeBlock implements Globals {
+   @Inject(
+      method = {"stepOn(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/Entity;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookOnSteppedOn(Level world, BlockPos pos, BlockState state, Entity entity, CallbackInfo ci) {
+      SteppedOnSlimeBlockEvent steppedOnSlimeBlockEvent = new SteppedOnSlimeBlockEvent();
+      EventBus.INSTANCE.dispatch(steppedOnSlimeBlockEvent);
+      if (steppedOnSlimeBlockEvent.isCanceled() && entity == mc.player) {
+         ci.cancel();
+      }
+   }
 }

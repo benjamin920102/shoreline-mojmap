@@ -7,10 +7,8 @@ import net.minecraft.network.chat.MessageSignature;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(ChatComponent.class)
-public interface AccessorChatHud
-{
-
-    @Invoker("addMessage")
-    void hookAddMessage(Component message, MessageSignature signatureData, GuiMessageTag indicator);
+@Mixin({ChatComponent.class})
+public interface AccessorChatHud {
+   @Invoker("addMessage")
+   void hookAddMessage(Component var1, MessageSignature var2, GuiMessageTag var3);
 }

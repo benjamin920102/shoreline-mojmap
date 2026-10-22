@@ -1,5 +1,12 @@
 package net.shoreline.client.impl.module.misc;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import net.shoreline.client.Shoreline;
 import net.shoreline.client.api.config.Config;
 import net.shoreline.client.api.config.setting.BooleanConfig;
@@ -16,155 +23,112 @@ import net.shoreline.client.util.math.timer.Timer;
 import net.shoreline.eventbus.annotation.EventListener;
 import net.shoreline.eventbus.event.StageEvent;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+public class SpammerModule extends ToggleModule {
+   Config<Float> delayConfig = this.register(new NumberConfig<>("Delay", "The chat message delay", 0.0F, 1.5F, 10.0F));
+   Config<Boolean> randomConfig = this.register(new BooleanConfig("Random", "Randomizes the spammed messages", false));
+   Config<Boolean> antiKickConfig = this.register(new BooleanConfig("AntiKick", "Adds a random suffix to end of messages to prevent kicks", false));
+   private final List<String> messages = new ArrayList<>();
+   private int messageIndex;
+   private final Timer spamTimer = new CacheTimer();
 
-/**
- * @author linus
- * @since 1.0
- */
-public class SpammerModule extends ToggleModule
-{
-    Config<Float> delayConfig = register(new NumberConfig<>("Delay", "The chat message delay", 0.0f, 1.5f, 10.0f));
-    Config<Boolean> randomConfig = register(new BooleanConfig("Random", "Randomizes the spammed messages", false));
-    Config<Boolean> antiKickConfig = register(new BooleanConfig("AntiKick", "Adds a random suffix to end of messages to prevent kicks", false));
-    private final List<String> messages = new ArrayList<>();
-    private int messageIndex;
-    private final Timer spamTimer = new CacheTimer();
+   public SpammerModule() {
+      super("Spammer", "Spams messages in the chat", ModuleCategory.MISCELLANEOUS);
+   }
 
-    public SpammerModule()
-    {
-        super("Spammer", "Spams messages in the chat", ModuleCategory.MISCELLANEOUS);
-    }
+   @Override
+   public void onEnable() {
+      this.loadFile();
+      this.messageIndex = 0;
+   }
 
-    @Override
-    public void onEnable()
-    {
-        loadFile();
-        messageIndex = 0;
-    }
+   @EventListener
+   public void onGameJoin(GameJoinEvent event) {
+      this.onEnable();
+   }
 
-    @EventListener
-    public void onGameJoin(GameJoinEvent event)
-    {
-        onEnable();
-    }
+   @EventListener
+   public void onTick(TickEvent event) {
+      if (event.getStage() == StageEvent.EventStage.PRE) {
+         if (this.spamTimer.passed(this.delayConfig.getValue() * 1000.0F)) {
+            this.sendSpamMessage(this.getSpammerMessage());
+            this.spamTimer.reset();
+         }
+      }
+   }
 
-    @EventListener
-    public void onTick(TickEvent event)
-    {
-        if (event.getStage() != StageEvent.EventStage.PRE)
-        {
-            return;
-        }
-        if (spamTimer.passed(delayConfig.getValue() * 1000.0f))
-        {
-            sendSpamMessage(getSpammerMessage());
-            spamTimer.reset();
-        }
-    }
+   private void loadFile() {
+      File spammerDir = Shoreline.CONFIG.getClientDirectory().resolve("spammer.txt").toFile();
+      if (!spammerDir.exists()) {
+         this.sendModuleError("The spammer.txt file does not exist! Please create one to enable this module");
+         this.disable();
+      } else {
+         this.messages.clear();
 
-    private void loadFile()
-    {
-        File spammerDir = Shoreline.CONFIG.getClientDirectory().resolve("spammer.txt").toFile();
-        if (!spammerDir.exists())
-        {
-            sendModuleError("The spammer.txt file does not exist! Please create one to enable this module");
-            disable();
-            return;
-        }
-        messages.clear();
-        try
-        {
-            for (String line : Files.readAllLines(Path.of(spammerDir.getAbsolutePath()), StandardCharsets.UTF_8))
-            {
-                String[] messages1 = line.split(",");
-                for (String message : messages1)
-                {
-                    messages.add(message.trim());
-                }
+         try {
+            for (String line : Files.readAllLines(Path.of(spammerDir.getAbsolutePath()), StandardCharsets.UTF_8)) {
+               String[] messages1 = line.split(",");
+
+               for (String message : messages1) {
+                  this.messages.add(message.trim());
+               }
             }
-        }
-        catch (IOException e)
-        {
+         } catch (IOException var9) {
+         }
+      }
+   }
 
-        }
-    }
+   private String getSpammerMessage() {
+      String defaultMessage = "Shoreline victory!";
+      if (this.messages.isEmpty()) {
+         return defaultMessage;
+      } else {
+         if (this.randomConfig.getValue()) {
+            String message = this.messages.get(RANDOM.nextInt(this.messages.size()));
+            if (message != null) {
+               if (this.antiKickConfig.getValue()) {
+                  message = message + " " + HexRandom.generateRandomHex(2);
+               }
 
-    private String getSpammerMessage()
-    {
-        String defaultMessage = "Shoreline victory!";
-        if (messages.isEmpty())
-        {
-            return defaultMessage;
-        }
-        if (randomConfig.getValue())
-        {
-            String message = messages.get(RANDOM.nextInt(messages.size()));
-            if (message != null)
-            {
-                if (antiKickConfig.getValue())
-                {
-                    message += " " + HexRandom.generateRandomHex(2);
-                }
-                return message;
+               return message;
             }
-        }
-        else
-        {
-            String message = messages.get(messageIndex);
-            messageIndex++;
-            if (messageIndex >= messages.size())
-            {
-                messageIndex = 0;
+         } else {
+            String message = this.messages.get(this.messageIndex);
+            this.messageIndex++;
+            if (this.messageIndex >= this.messages.size()) {
+               this.messageIndex = 0;
             }
 
-            if (message != null)
-            {
-                if (antiKickConfig.getValue())
-                {
-                    message += " " + HexRandom.generateRandomHex(2);
-                }
-                return message;
-            }
-        }
-        return defaultMessage;
-    }
+            if (message != null) {
+               if (this.antiKickConfig.getValue()) {
+                  message = message + " " + HexRandom.generateRandomHex(2);
+               }
 
-    private void sendSpamMessage(String message)
-    {
-        if (message.charAt(0) == '/')
-        {
-            message = message.substring(1);
-            mc.player.connection.sendUnsignedCommand(message);
-            return;
-        }
-        if (message.startsWith(Managers.COMMAND.getPrefix()))
-        {
-            String literal = message.substring(1);
-            mc.gui.getChat().addRecentChat(message);
-            try
-            {
-                Managers.COMMAND.getDispatcher().execute(Managers.COMMAND.getDispatcher().parse(literal, Managers.COMMAND.getSource()));
+               return message;
             }
-            catch (Exception exception)
-            {
-                // exception.printStackTrace();
-            }
-            return;
-        }
-        if (mc.isLocalServer())
-        {
+         }
+
+         return defaultMessage;
+      }
+   }
+
+   private void sendSpamMessage(String message) {
+      if (message.charAt(0) == '/') {
+         message = message.substring(1);
+         mc.player.connection.sendUnsignedCommand(message);
+      } else if (message.startsWith(Managers.COMMAND.getPrefix())) {
+         String literal = message.substring(1);
+         mc.gui.getChat().addRecentChat(message);
+
+         try {
+            Managers.COMMAND.getDispatcher().execute(Managers.COMMAND.getDispatcher().parse(literal, Managers.COMMAND.getSource()));
+         } catch (Exception var4) {
+         }
+      } else {
+         if (mc.isLocalServer()) {
             ChatUtil.clientSendMessageRaw(message);
-        }
-        else
-        {
+         } else {
             ChatUtil.serverSendMessage(message);
-        }
-    }
+         }
+      }
+   }
 }

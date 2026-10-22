@@ -8,28 +8,22 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.chat.ChatUtil;
 
-public class HideAllCommand extends Command
-{
+public class HideAllCommand extends Command {
+   public HideAllCommand() {
+      super("HideAll", "Hides all modules from the arraylist", literal("hideall"));
+   }
 
-    public HideAllCommand()
-    {
-        super("HideAll", "Hides all modules from the arraylist", literal("hideall"));
-    }
-
-    @Override
-    public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder)
-    {
-        builder.executes(c ->
-        {
-            for (Module module : Managers.MODULE.getModules())
-            {
-                if (module instanceof ToggleModule toggleModule && !toggleModule.isHidden())
-                {
-                    toggleModule.setHidden(true);
-                }
+   @Override
+   public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
+      builder.executes(c -> {
+         for (Module module : Managers.MODULE.getModules()) {
+            if (module instanceof ToggleModule toggleModule && !toggleModule.isHidden()) {
+               toggleModule.setHidden(true);
             }
-            ChatUtil.clientSendMessage("All modules are hidden");
-            return 1;
-        });
-    }
+         }
+
+         ChatUtil.clientSendMessage("All modules are hidden");
+         return 1;
+      });
+   }
 }

@@ -1,11 +1,6 @@
 package net.shoreline.client.api.font;
 
-/**
- * @author xgraza
- * @since 1.0
- */
 @FunctionalInterface
-public interface GlyphVisitor
-{
-    int draw(final FontRenderer fontRenderer, final char c, final double x, final double y, final int color, final boolean shadow);
+public interface GlyphVisitor {
+   int draw(FontRenderer var1, char var2, double var3, double var5, int var7, boolean var8);
 }

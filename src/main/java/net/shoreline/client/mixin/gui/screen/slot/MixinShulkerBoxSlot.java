@@ -9,19 +9,19 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(ShulkerBoxSlot.class)
-public class MixinShulkerBoxSlot
-{
-
-    @Inject(method = "mayPlace", at = @At(value = "HEAD"), cancellable = true)
-    private void hookCanInsert(ItemStack stack, CallbackInfoReturnable<Boolean> cir)
-    {
-        ShulkerNestedEvent shulkerNestedEvent = new ShulkerNestedEvent();
-        EventBus.INSTANCE.dispatch(shulkerNestedEvent);
-        if (shulkerNestedEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(true);
-        }
-    }
+@Mixin({ShulkerBoxSlot.class})
+public class MixinShulkerBoxSlot {
+   @Inject(
+      method = {"mayPlace(Lnet/minecraft/world/item/ItemStack;)Z"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookCanInsert(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+      ShulkerNestedEvent shulkerNestedEvent = new ShulkerNestedEvent();
+      EventBus.INSTANCE.dispatch(shulkerNestedEvent);
+      if (shulkerNestedEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(true);
+      }
+   }
 }

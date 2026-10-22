@@ -1,5 +1,11 @@
 package net.shoreline.client.impl.module.misc;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import net.shoreline.client.api.module.ModuleCategory;
 import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.TickEvent;
@@ -9,68 +15,50 @@ import net.shoreline.client.util.math.timer.Timer;
 import net.shoreline.eventbus.annotation.EventListener;
 import net.shoreline.eventbus.event.StageEvent;
 
-import java.util.*;
-import java.util.stream.Collectors;
+public class AntiVanishModule extends ToggleModule {
+   private final Timer vanishTimer = new CacheTimer();
+   private final Set<String> messageCache = new HashSet<>();
+   private Map<UUID, String> playerCache = new HashMap<>();
 
-public class AntiVanishModule extends ToggleModule
-{
-    //
-    private final Timer vanishTimer = new CacheTimer();
-    private final Set<String> messageCache = new HashSet<>();
-    //
-    private Map<UUID, String> playerCache = new HashMap<>();
+   public AntiVanishModule() {
+      super("AntiVanish", "Notifies user when a player uses /vanish", ModuleCategory.MISCELLANEOUS);
+   }
 
-    public AntiVanishModule()
-    {
-        super("AntiVanish", "Notifies user when a player uses /vanish", ModuleCategory.MISCELLANEOUS);
-    }
+   @Override
+   public void onEnable() {
+      this.messageCache.clear();
+   }
 
-    @Override
-    public void onEnable()
-    {
-        messageCache.clear();
-    }
+   @EventListener
+   public void onChatMessage(ChatMessageEvent event) {
+      String message = event.getText().getString();
+      if (message.contains("left")) {
+         this.messageCache.add(message);
+      }
+   }
 
-    // TODO: Find a better way to do this
-    @EventListener
-    public void onChatMessage(ChatMessageEvent event)
-    {
-        // This only works if the server doesnt have a custom join/leave
-        // message plugin
-        String message = event.getText().getString();
-        if (message.contains("left"))
-        {
-            messageCache.add(message);
-        }
-    }
+   @EventListener
+   public void onTick(TickEvent event) {
+      if (event.getStage() == StageEvent.EventStage.PRE) {
+         if (this.vanishTimer.passed(1000)) {
+            Map<UUID, String> players = this.playerCache;
+            this.playerCache = mc.getConnection()
+               .getOnlinePlayers()
+               .stream()
+               .collect(Collectors.toMap(e -> e.getProfile().getId(), e -> e.getProfile().getName()));
 
-    @EventListener
-    public void onTick(TickEvent event)
-    {
-        if (event.getStage() != StageEvent.EventStage.PRE)
-        {
-            return;
-        }
-        if (!vanishTimer.passed(1000))
-        {
-            return;
-        }
-        final Map<UUID, String> players = playerCache;
-        playerCache = mc.getConnection().getOnlinePlayers().stream()
-                .collect(Collectors.toMap(e -> e.getProfile().getId(), e -> e.getProfile().getName()));
-        for (UUID uuid : players.keySet())
-        {
-            if (playerCache.containsKey(uuid))
-            {
-                continue;
+            for (UUID uuid : players.keySet()) {
+               if (!this.playerCache.containsKey(uuid)) {
+                  String name = players.get(uuid);
+                  if (this.messageCache.stream().noneMatch(s -> s.contains(name))) {
+                     this.sendModuleMessage("%s used /vanish!", new Object[]{name});
+                  }
+               }
             }
-            String name = players.get(uuid);
-            if (messageCache.stream().noneMatch(s -> s.contains(name)))
-            {
-                sendModuleMessage("%s used /vanish!", name);
-            }
-        }
-        messageCache.clear();
-        vanishTimer.reset();
-    }
+
+            this.messageCache.clear();
+            this.vanishTimer.reset();
+         }
+      }
+   }
 }

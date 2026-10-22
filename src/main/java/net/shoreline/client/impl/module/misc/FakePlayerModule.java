@@ -7,60 +7,39 @@ import net.shoreline.client.impl.event.network.DisconnectEvent;
 import net.shoreline.client.util.entity.FakePlayerEntity;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @see FakePlayerEntity
- * @since 1.0
- */
-public class FakePlayerModule extends ToggleModule
-{
-    //
-    private FakePlayerEntity fakePlayer;
+public class FakePlayerModule extends ToggleModule {
+   private FakePlayerEntity fakePlayer;
 
-    /**
-     *
-     */
-    public FakePlayerModule()
-    {
-        super("FakePlayer", "Spawns an indestructible client-side player",
-                ModuleCategory.MISCELLANEOUS);
-    }
+   public FakePlayerModule() {
+      super("FakePlayer", "Spawns an indestructible client-side player", ModuleCategory.MISCELLANEOUS);
+   }
 
-    @Override
-    public void onEnable()
-    {
-        if (mc.player != null && mc.level != null)
-        {
-            fakePlayer = new FakePlayerEntity(mc.player, "FakePlayer");
-            fakePlayer.spawnPlayer();
-        }
-    }
+   @Override
+   public void onEnable() {
+      if (mc.player != null && mc.level != null) {
+         this.fakePlayer = new FakePlayerEntity(mc.player, "FakePlayer");
+         this.fakePlayer.spawnPlayer();
+      }
+   }
 
-    @Override
-    public void onDisable()
-    {
-        if (fakePlayer != null)
-        {
-            fakePlayer.despawnPlayer();
-            fakePlayer = null;
-        }
-    }
+   @Override
+   public void onDisable() {
+      if (this.fakePlayer != null) {
+         this.fakePlayer.despawnPlayer();
+         this.fakePlayer = null;
+      }
+   }
 
-    @EventListener
-    public void onDisconnect(DisconnectEvent event)
-    {
-        fakePlayer = null;
-        disable();
-    }
+   @EventListener
+   public void onDisconnect(DisconnectEvent event) {
+      this.fakePlayer = null;
+      this.disable();
+   }
 
-    @EventListener
-    public void onPushEntity(PushEntityEvent event)
-    {
-        // Prevents Simulation flags (as the FakePlayer is client only, so Grim rightfully
-        // flags us for that push motion that shouldn't happen
-        if (event.getPushed().equals(mc.player) && event.getPusher().equals(fakePlayer))
-        {
-            event.setCanceled(true);
-        }
-    }
+   @EventListener
+   public void onPushEntity(PushEntityEvent event) {
+      if (event.getPushed().equals(mc.player) && event.getPusher().equals(this.fakePlayer)) {
+         event.setCanceled(true);
+      }
+   }
 }

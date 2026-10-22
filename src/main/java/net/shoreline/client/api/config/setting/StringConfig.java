@@ -2,59 +2,31 @@ package net.shoreline.client.api.config.setting;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.util.function.Supplier;
 import net.shoreline.client.api.config.Config;
 
-import java.util.function.Supplier;
+public class StringConfig extends Config<String> {
+   public StringConfig(String name, String desc, String value) {
+      super(name, desc, value);
+   }
 
-/**
- * @author linus
- * @since 1.0
- */
-public class StringConfig extends Config<String>
-{
-    /**
-     * Initializes the config with a default value. This constructor should
-     * not be used to initialize a configuration, instead use the explicit
-     * definitions of the configs in {@link net.shoreline.client.api.config.setting}.
-     *
-     * @param name  The unique config identifier
-     * @param desc  The config description
-     * @param value The default config value
-     * @throws NullPointerException if value is <tt>null</tt>
-     */
-    public StringConfig(String name, String desc, String value)
-    {
-        super(name, desc, value);
-    }
+   public StringConfig(String name, String desc, String value, Supplier<Boolean> visible) {
+      super(name, desc, value, visible);
+   }
 
-    public StringConfig(String name, String desc, String value, Supplier<Boolean> visible)
-    {
-        super(name, desc, value, visible);
-    }
+   @Override
+   public JsonObject toJson() {
+      JsonObject configObj = super.toJson();
+      configObj.addProperty("value", this.getValue());
+      return configObj;
+   }
 
-    /**
-     * @return
-     */
-    @Override
-    public JsonObject toJson()
-    {
-        JsonObject configObj = super.toJson();
-        configObj.addProperty("value", getValue());
-        return configObj;
-    }
-
-    /**
-     * @param jsonObj
-     * @return
-     */
-    @Override
-    public String fromJson(JsonObject jsonObj)
-    {
-        if (jsonObj.has("value"))
-        {
-            JsonElement element = jsonObj.get("value");
-            return element.getAsString();
-        }
-        return null;
-    }
+   public String fromJson(JsonObject jsonObj) {
+      if (jsonObj.has("value")) {
+         JsonElement element = jsonObj.get("value");
+         return element.getAsString();
+      } else {
+         return null;
+      }
+   }
 }

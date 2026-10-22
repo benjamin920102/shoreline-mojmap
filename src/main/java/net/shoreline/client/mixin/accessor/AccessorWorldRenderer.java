@@ -1,38 +1,26 @@
 package net.shoreline.client.mixin.accessor;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.gen.Accessor;
-
 import java.util.Set;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.server.level.BlockDestructionProgress;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.gen.Accessor;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(LevelRenderer.class)
-public interface AccessorWorldRenderer
-{
-    /**
-     * @return
-     */
-    @Accessor("cullingFrustum")
-    Frustum getFrustum();
+@Mixin({LevelRenderer.class})
+public interface AccessorWorldRenderer {
+   @Accessor("cullingFrustum")
+   Frustum getFrustum();
 
-    /**
-     * @return
-     */
-    @Accessor("destroyingBlocks")
-    Int2ObjectMap<BlockDestructionProgress> getBlockBreakingProgressions();
+   @Accessor("destroyingBlocks")
+   Int2ObjectMap<BlockDestructionProgress> getBlockBreakingProgressions();
 
-    @Accessor("renderBuffers")
-    RenderBuffers hookGetBufferBuilders();
+   @Accessor("renderBuffers")
+   RenderBuffers hookGetBufferBuilders();
 
-    @Accessor("globalBlockEntities")
-    Set<BlockEntity> hookGetNoCullingBlockEntities();
+   @Accessor("globalBlockEntities")
+   Set<BlockEntity> hookGetNoCullingBlockEntities();
 }

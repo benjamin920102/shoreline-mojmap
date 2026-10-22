@@ -10,111 +10,83 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.entity.SwingEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class SwingModule extends ToggleModule
-{
-    private static SwingModule INSTANCE;
+public class SwingModule extends ToggleModule {
+   private static SwingModule INSTANCE;
+   Config<SwingModule.SwingHand> swingHandConfig = this.register(
+      new EnumConfig<>("Hand", "The player swinging hand", SwingModule.SwingHand.MAINHAND, SwingModule.SwingHand.values())
+   );
+   private InteractionHand prevPreferredHand;
+   private InteractionHand hand;
 
-    //
-    Config<SwingHand> swingHandConfig = register(new EnumConfig<>("Hand", "The player swinging hand", SwingHand.MAINHAND, SwingHand.values()));
-    private InteractionHand prevPreferredHand;
-    private InteractionHand hand;
+   public SwingModule() {
+      super("Swing", "Modifies the swinging hand", ModuleCategory.MISCELLANEOUS);
+      INSTANCE = this;
+   }
 
-    public SwingModule()
-    {
-        super("Swing", "Modifies the swinging hand", ModuleCategory.MISCELLANEOUS);
-        INSTANCE = this;
-    }
+   public static SwingModule getInstance() {
+      return INSTANCE;
+   }
 
-    public static SwingModule getInstance()
-    {
-        return INSTANCE;
-    }
+   @Override
+   public void onEnable() {
+      if (mc.player != null) {
+         this.prevPreferredHand = mc.player.swingingArm;
+         if (this.swingHandConfig.getValue() != SwingModule.SwingHand.PACKET) {
+            this.updateSwingHand(this.swingHandConfig.getValue());
+         }
+      }
+   }
 
-    @Override
-    public void onEnable()
-    {
-        if (mc.player != null)
-        {
-            prevPreferredHand = mc.player.swingingArm;
-            if (swingHandConfig.getValue() != SwingHand.PACKET)
-            {
-                updateSwingHand(swingHandConfig.getValue());
-            }
-        }
-    }
+   @Override
+   public void onDisable() {
+      if (mc.player != null) {
+         mc.player.swingingArm = this.prevPreferredHand;
+      }
+   }
 
-    @Override
-    public void onDisable()
-    {
-        if (mc.player != null)
-        {
-            mc.player.swingingArm = prevPreferredHand;
-        }
-    }
+   @EventListener
+   public void onSwing(SwingEvent event) {
+      this.updateSwingHand(this.swingHandConfig.getValue());
+   }
 
-    @EventListener
-    public void onSwing(SwingEvent event)
-    {
-        updateSwingHand(swingHandConfig.getValue());
-    }
+   private void updateSwingHand(SwingModule.SwingHand swingHand) {
+      this.hand = switch (swingHand) {
+         case MAINHAND -> InteractionHand.MAIN_HAND;
+         case OFFHAND -> InteractionHand.OFF_HAND;
+         case SWAP -> mc.player.swinging && mc.player.swingTime < this.getHandSwingDuration() / 2 && mc.player.swingTime >= 0
+            ? this.hand
+            : (this.hand != InteractionHand.MAIN_HAND ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
+         case PACKET -> {
+            mc.player.swingTime = 0;
+            mc.player.swinging = false;
+            yield null;
+         }
+      };
+      if (this.hand != null) {
+         mc.player.swingingArm = this.hand;
+      }
+   }
 
-    private void updateSwingHand(SwingHand swingHand)
-    {
-        hand = switch (swingHand)
-        {
-            case MAINHAND -> InteractionHand.MAIN_HAND;
-            case OFFHAND -> InteractionHand.OFF_HAND;
-            case SWAP ->
-            {
-                if (!mc.player.swinging
-                        || mc.player.swingTime >= getHandSwingDuration() / 2
-                        || mc.player.swingTime < 0)
-                {
-                    yield hand != InteractionHand.MAIN_HAND ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
-                }
-                yield hand;
-            }
-            case PACKET ->
-            {
-                mc.player.swingTime = 0;
-                mc.player.swinging = false;
-                yield null;
-            }
-        };
-        if (hand != null)
-        {
-            mc.player.swingingArm = hand;
-        }
-    }
+   public int getHandSwingDuration() {
+      if (MobEffectUtil.hasDigSpeed(mc.player)) {
+         return 6 - (1 + MobEffectUtil.getDigSpeedAmplification(mc.player));
+      } else {
+         return mc.player.hasEffect(MobEffects.DIG_SLOWDOWN) ? 6 + (1 + mc.player.getEffect(MobEffects.DIG_SLOWDOWN).getAmplifier()) * 2 : 6;
+      }
+   }
 
-    public int getHandSwingDuration()
-    {
-        if (MobEffectUtil.hasDigSpeed(mc.player)) {
-            return 6 - (1 + MobEffectUtil.getDigSpeedAmplification(mc.player));
-        }
-        return mc.player.hasEffect(MobEffects.DIG_SLOWDOWN) ?
-                6 + (1 + mc.player.getEffect(MobEffects.DIG_SLOWDOWN).getAmplifier()) * 2 : 6;
-    }
+   public InteractionHand getSwingHand() {
+      return this.hand;
+   }
 
-    public InteractionHand getSwingHand()
-    {
-        return hand;
-    }
+   public InteractionHand getPrevPreferredHand() {
+      return this.prevPreferredHand;
+   }
 
-    public InteractionHand getPrevPreferredHand()
-    {
-        return prevPreferredHand;
-    }
-
-    private enum SwingHand
-    {
-        MAINHAND,
-        OFFHAND,
-        SWAP,
-        PACKET
-    }
+   private static enum SwingHand {
+      MAINHAND,
+      OFFHAND,
+      SWAP,
+      PACKET;
+   }
 }

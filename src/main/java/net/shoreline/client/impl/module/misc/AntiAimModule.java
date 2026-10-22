@@ -8,107 +8,78 @@ import net.shoreline.client.impl.event.network.PlayerTickEvent;
 import net.shoreline.client.impl.module.RotationModule;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class AntiAimModule extends RotationModule
-{
-    //
-    Config<YawMode> yawModeConfig = register(new EnumConfig<>("Yaw", "The mode for the rotation yaw spin ", YawMode.SPIN, YawMode.values()));
-    Config<PitchMode> pitchModeConfig = register(new EnumConfig<>("Pitch", "The mode for the rotation pitch spin", PitchMode.DOWN, PitchMode.values()));
-    Config<Float> yawAddConfig = register(new NumberConfig<>("YawAdd", "The yaw to add during each rotation", -180.0f, 20.0f, 180.0f));
-    Config<Float> pitchAddConfig = register(new NumberConfig<>("CustomPitch", "The pitch to add during each rotation", -90.0f, 20.0f, 90.0f));
-    Config<Float> spinSpeedConfig = register(new NumberConfig<>("SpinSpeed", "The yaw speed to rotate", 1.0f, 16.0f, 40.0f));
-    Config<Integer> flipTicksConfig = register(new NumberConfig<>("FlipTicks", "The number of ticks to wait between jitter", 2, 2, 20));
-    //
-    private float yaw;
-    private float pitch;
-    //
-    private float prevYaw, prevPitch;
+public class AntiAimModule extends RotationModule {
+   Config<AntiAimModule.YawMode> yawModeConfig = this.register(
+      new EnumConfig<>("Yaw", "The mode for the rotation yaw spin ", AntiAimModule.YawMode.SPIN, AntiAimModule.YawMode.values())
+   );
+   Config<AntiAimModule.PitchMode> pitchModeConfig = this.register(
+      new EnumConfig<>("Pitch", "The mode for the rotation pitch spin", AntiAimModule.PitchMode.DOWN, AntiAimModule.PitchMode.values())
+   );
+   Config<Float> yawAddConfig = this.register(new NumberConfig<>("YawAdd", "The yaw to add during each rotation", -180.0F, 20.0F, 180.0F));
+   Config<Float> pitchAddConfig = this.register(new NumberConfig<>("CustomPitch", "The pitch to add during each rotation", -90.0F, 20.0F, 90.0F));
+   Config<Float> spinSpeedConfig = this.register(new NumberConfig<>("SpinSpeed", "The yaw speed to rotate", 1.0F, 16.0F, 40.0F));
+   Config<Integer> flipTicksConfig = this.register(new NumberConfig<>("FlipTicks", "The number of ticks to wait between jitter", 2, 2, 20));
+   private float yaw;
+   private float pitch;
+   private float prevYaw;
+   private float prevPitch;
 
-    /**
-     *
-     */
-    public AntiAimModule()
-    {
-        super("AntiAim", "Makes it harder to accurately aim at the player",
-                ModuleCategory.MISCELLANEOUS, 50);
-    }
+   public AntiAimModule() {
+      super("AntiAim", "Makes it harder to accurately aim at the player", ModuleCategory.MISCELLANEOUS, 50);
+   }
 
-    /**
-     *
-     */
-    @Override
-    public void onEnable()
-    {
-        if (mc.player == null)
-        {
-            return;
-        }
-        prevYaw = mc.player.getYRot();
-        prevPitch = mc.player.getXRot();
-    }
+   @Override
+   public void onEnable() {
+      if (mc.player != null) {
+         this.prevYaw = mc.player.getYRot();
+         this.prevPitch = mc.player.getXRot();
+      }
+   }
 
-    /**
-     * @param event
-     */
-    @EventListener
-    public void onPlayerUpdate(PlayerTickEvent event)
-    {
-        if (mc.options.keyAttack.isDown() || mc.options.keyUse.isDown())
-        {
-            return;
-        }
-        yaw = switch (yawModeConfig.getValue())
-        {
+   @EventListener
+   public void onPlayerUpdate(PlayerTickEvent event) {
+      if (!mc.options.keyAttack.isDown() && !mc.options.keyUse.isDown()) {
+         this.yaw = switch ((AntiAimModule.YawMode)this.yawModeConfig.getValue()) {
             case OFF -> mc.player.getYRot();
-            case STATIC -> mc.player.getYRot() + yawAddConfig.getValue();
-            case ZERO -> prevYaw;
-            case SPIN ->
-            {
-                float spin = yaw + spinSpeedConfig.getValue();
-                if (spin > 360.0f)
-                {
-                    yield spin - 360.0f;
-                }
-                yield spin;
+            case STATIC -> mc.player.getYRot() + this.yawAddConfig.getValue();
+            case ZERO -> this.prevYaw;
+            case SPIN -> {
+               float spin = this.yaw + this.spinSpeedConfig.getValue();
+               yield spin > 360.0F ? spin - 360.0F : spin;
             }
-            case JITTER -> mc.player.getYRot() + ((mc.player.tickCount % flipTicksConfig.getValue() == 0) ?
-                    yawAddConfig.getValue() : -yawAddConfig.getValue());
-        };
-        pitch = switch (pitchModeConfig.getValue())
-        {
+            case JITTER -> mc.player.getYRot()
+               + (mc.player.tickCount % this.flipTicksConfig.getValue() == 0 ? this.yawAddConfig.getValue() : -this.yawAddConfig.getValue());
+         };
+
+         this.pitch = switch ((AntiAimModule.PitchMode)this.pitchModeConfig.getValue()) {
             case OFF -> mc.player.getXRot();
-            case STATIC -> pitchAddConfig.getValue();
-            case ZERO -> prevPitch;
-            case UP -> -90.0f;
-            case DOWN -> 90.0f;
-            case JITTER ->
-            {
-                float jitter = pitch + 30.0f;
-                if (jitter > 90.0f)
-                {
-                    yield -90.0f;
-                }
-                if (jitter < -90.0f)
-                {
-                    yield 90.0f;
-                }
-                yield jitter;
+            case STATIC -> this.pitchAddConfig.getValue();
+            case ZERO -> this.prevPitch;
+            case UP -> -90.0F;
+            case DOWN -> 90.0F;
+            case JITTER -> {
+               float jitter = this.pitch + 30.0F;
+               yield jitter > 90.0F ? -90.0F : (jitter < -90.0F ? 90.0F : jitter);
             }
-        };
-        //
-        setRotation(yaw, pitch);
-    }
+         };
+         this.setRotation(this.yaw, this.pitch);
+      }
+   }
 
-    public enum YawMode
-    {
-        OFF, STATIC, ZERO, SPIN, JITTER
-    }
+   public static enum PitchMode {
+      OFF,
+      STATIC,
+      ZERO,
+      UP,
+      DOWN,
+      JITTER;
+   }
 
-    public enum PitchMode
-    {
-        OFF, STATIC, ZERO, UP, DOWN, JITTER
-    }
+   public static enum YawMode {
+      OFF,
+      STATIC,
+      ZERO,
+      SPIN,
+      JITTER;
+   }
 }

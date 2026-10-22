@@ -6,39 +6,32 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class CapesEvent extends Event
-{
-    private final GameProfile gameProfile;
-    private ResourceLocation texture;
-    private boolean optifine;
+public class CapesEvent extends Event {
+   private final GameProfile gameProfile;
+   private ResourceLocation texture;
+   private boolean optifine;
 
-    public CapesEvent(GameProfile gameProfile)
-    {
-        this.gameProfile = gameProfile;
-    }
+   public CapesEvent(GameProfile gameProfile) {
+      this.gameProfile = gameProfile;
+   }
 
-    public GameProfile getGameProfile()
-    {
-        return gameProfile;
-    }
+   public GameProfile getGameProfile() {
+      return this.gameProfile;
+   }
 
-    public void setTexture(ResourceLocation texture)
-    {
-        this.texture = texture;
-    }
+   public void setTexture(ResourceLocation texture) {
+      this.texture = texture;
+   }
 
-    public ResourceLocation getTexture()
-    {
-        return texture;
-    }
+   public ResourceLocation getTexture() {
+      return this.texture;
+   }
 
-    public void setShowOptifine(boolean optifine)
-    {
-        this.optifine = optifine;
-    }
+   public void setShowOptifine(boolean optifine) {
+      this.optifine = optifine;
+   }
 
-    public boolean getShowOptifine()
-    {
-        return optifine;
-    }
+   public boolean getShowOptifine() {
+      return this.optifine;
+   }
 }

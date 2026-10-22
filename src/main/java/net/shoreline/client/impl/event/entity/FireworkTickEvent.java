@@ -5,17 +5,14 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class FireworkTickEvent extends Event
-{
-     private final FireworkRocketEntity fireworkRocketEntity;
+public class FireworkTickEvent extends Event {
+   private final FireworkRocketEntity fireworkRocketEntity;
 
-     public FireworkTickEvent(FireworkRocketEntity fireworkRocketEntity)
-     {
-         this.fireworkRocketEntity = fireworkRocketEntity;
-     }
+   public FireworkTickEvent(FireworkRocketEntity fireworkRocketEntity) {
+      this.fireworkRocketEntity = fireworkRocketEntity;
+   }
 
-    public FireworkRocketEntity getFireworkRocketEntity()
-    {
-        return fireworkRocketEntity;
-    }
+   public FireworkRocketEntity getFireworkRocketEntity() {
+      return this.fireworkRocketEntity;
+   }
 }

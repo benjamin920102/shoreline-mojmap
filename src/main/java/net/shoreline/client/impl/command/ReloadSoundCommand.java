@@ -5,21 +5,17 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.shoreline.client.api.command.Command;
 import net.shoreline.client.util.chat.ChatUtil;
 
-public class ReloadSoundCommand extends Command
-{
-    public ReloadSoundCommand()
-    {
-        super("ReloadSound", "Reloads the Minecraft sound system", literal("reloadsound"));
-    }
+public class ReloadSoundCommand extends Command {
+   public ReloadSoundCommand() {
+      super("ReloadSound", "Reloads the Minecraft sound system", literal("reloadsound"));
+   }
 
-    @Override
-    public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder)
-    {
-        builder.executes(context ->
-        {
-            mc.getSoundManager().reload();
-            ChatUtil.clientSendMessage("Reloaded the SoundSystem");
-            return 1;
-        });
-    }
+   @Override
+   public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
+      builder.executes(context -> {
+         mc.getSoundManager().reload();
+         ChatUtil.clientSendMessage("Reloaded the SoundSystem");
+         return 1;
+      });
+   }
 }

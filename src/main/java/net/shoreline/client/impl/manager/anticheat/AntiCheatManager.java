@@ -1,5 +1,6 @@
 package net.shoreline.client.impl.manager.anticheat;
 
+import java.util.Arrays;
 import net.minecraft.network.protocol.common.ClientboundPingPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.world.phys.Vec3;
@@ -10,78 +11,58 @@ import net.shoreline.client.util.Globals;
 import net.shoreline.eventbus.EventBus;
 import net.shoreline.eventbus.annotation.EventListener;
 
-import java.util.Arrays;
+public final class AntiCheatManager implements Globals {
+   private SetbackData lastSetback;
+   private final int[] transactions = new int[4];
+   private int index;
+   private boolean isGrim;
 
-/**
- * @author xgraza
- * @since 1.0
- */
-public final class AntiCheatManager implements Globals
-{
-    private SetbackData lastSetback;
+   public AntiCheatManager() {
+      EventBus.INSTANCE.subscribe(this);
+      Arrays.fill(this.transactions, -1);
+   }
 
-    private final int[] transactions = new int[4];
-    private int index;
-    private boolean isGrim;
+   @EventListener
+   public void onPacketInbound(PacketEvent.Inbound event) {
+      if (event.getPacket() instanceof ClientboundPingPacket packet) {
+         if (this.index > 3) {
+            return;
+         }
 
-    public AntiCheatManager()
-    {
-        EventBus.INSTANCE.subscribe(this);
-        Arrays.fill(transactions, -1);
-    }
+         int uid = packet.getId();
+         this.transactions[this.index] = uid;
+         this.index++;
+         if (this.index == 4) {
+            this.grimCheck();
+         }
+      } else if (event.getPacket() instanceof ClientboundPlayerPositionPacket packet) {
+         this.lastSetback = new SetbackData(new Vec3(packet.getX(), packet.getY(), packet.getZ()), System.currentTimeMillis(), packet.getId());
+      }
+   }
 
-    @EventListener
-    public void onPacketInbound(final PacketEvent.Inbound event)
-    {
-        if (event.getPacket() instanceof ClientboundPingPacket packet)
-        {
-            if (index > 3)
-            {
-                return;
-            }
-            final int uid = packet.getId();
-            transactions[index] = uid;
-            ++index;
-            if (index == 4)
-            {
-                grimCheck();
-            }
-        }
-        else if (event.getPacket() instanceof ClientboundPlayerPositionPacket packet)
-        {
-            lastSetback = new SetbackData(new Vec3(packet.getX(), packet.getY(), packet.getZ()),
-                    System.currentTimeMillis(), packet.getId());
-        }
-    }
+   @EventListener
+   public void onDisconnect(DisconnectEvent event) {
+      Arrays.fill(this.transactions, -1);
+      this.index = 0;
+      this.isGrim = false;
+   }
 
-    @EventListener
-    public void onDisconnect(final DisconnectEvent event)
-    {
-        Arrays.fill(transactions, -1);
-        index = 0;
-        isGrim = false;
-    }
+   private void grimCheck() {
+      int i = 0;
 
-    private void grimCheck()
-    {
-        for (int i = 0; i < 4; ++i)
-        {
-            if (transactions[i] != -i)
-            {
-                break;
-            }
-        }
-        isGrim = true;
-        Shoreline.info("Server is running GrimAC.");
-    }
+      while (i < 4 && this.transactions[i] == -i) {
+         i++;
+      }
 
-    public boolean isGrim()
-    {
-        return isGrim;
-    }
+      this.isGrim = true;
+      Shoreline.info("Server is running GrimAC.");
+   }
 
-    public boolean hasPassed(final long timeMS)
-    {
-        return lastSetback != null && lastSetback.timeSince() >= timeMS;
-    }
+   public boolean isGrim() {
+      return this.isGrim;
+   }
+
+   public boolean hasPassed(long timeMS) {
+      return this.lastSetback != null && this.lastSetback.timeSince() >= timeMS;
+   }
 }

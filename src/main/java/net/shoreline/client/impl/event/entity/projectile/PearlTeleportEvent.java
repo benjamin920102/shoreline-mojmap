@@ -5,17 +5,14 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class PearlTeleportEvent extends Event
-{
-    private final DimensionTransition teleportTarget;
+public class PearlTeleportEvent extends Event {
+   private final DimensionTransition teleportTarget;
 
-    public PearlTeleportEvent(DimensionTransition teleportTarget)
-    {
-        this.teleportTarget = teleportTarget;
-    }
+   public PearlTeleportEvent(DimensionTransition teleportTarget) {
+      this.teleportTarget = teleportTarget;
+   }
 
-    public DimensionTransition getTeleportTarget()
-    {
-        return teleportTarget;
-    }
+   public DimensionTransition getTeleportTarget() {
+      return this.teleportTarget;
+   }
 }

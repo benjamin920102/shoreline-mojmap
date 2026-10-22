@@ -1,9 +1,8 @@
 package net.shoreline.client.impl.imixin;
 
 @IMixin
-public interface IChatHudLineVisible
-{
-    int getId();
+public interface IChatHudLineVisible {
+   int getId();
 
-    void setId(int id);
+   void setId(int var1);
 }

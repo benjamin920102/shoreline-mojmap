@@ -1,5 +1,6 @@
 package net.shoreline.client.impl.gui.click.impl.config.setting;
 
+import java.awt.Color;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
 import net.shoreline.client.api.config.Config;
@@ -11,103 +12,54 @@ import net.shoreline.client.impl.module.client.ClickGuiModule;
 import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.render.animation.Animation;
 
-import java.awt.*;
+public class CheckboxButton extends ConfigButton<Boolean> {
+   public CheckboxButton(CategoryFrame frame, ModuleButton moduleButton, Config<Boolean> config, float x, float y) {
+      super(frame, moduleButton, config, x, y);
+      config.getAnimation().setState(config.getValue());
+   }
 
-/**
- * @author linus
- * @see Config
- * @since 1.0
- */
-public class CheckboxButton extends ConfigButton<Boolean>
-{
+   @Override
+   public void render(GuiGraphics context, float ix, float iy, float mouseX, float mouseY, float delta) {
+      this.setHeight(RenderManager.textHeight() + 4.0F);
+      this.x = ix;
+      this.y = iy;
+      Animation checkboxAnimation = this.config.getAnimation();
+      boolean state = this.isWithin(mouseX, mouseY);
+      if (state != this.hoverAnimation.getState()) {
+         this.hoverAnimation.setState(state);
+      }
 
-    /**
-     * @param frame
-     * @param config
-     */
-    public CheckboxButton(CategoryFrame frame, ModuleButton moduleButton, Config<Boolean> config, float x, float y)
-    {
-        super(frame, moduleButton, config, x, y);
-        config.getAnimation().setState(config.getValue());
-    }
+      int hoverAlpha = (int)(80.0 * Mth.clamp(this.hoverAnimation.getFactor(), 0.0, 1.0));
+      this.rect(
+         context,
+         checkboxAnimation.getFactor() > 0.01F
+            ? ClickGuiModule.getInstance().getColor(100 + hoverAlpha, (float)checkboxAnimation.getFactor())
+            : new Color(hoverAlpha, hoverAlpha, hoverAlpha, hoverAlpha).getRGB()
+      );
+      int whiteText = -1;
+      this.drawStringScaled(context, this.config.getName(), ix + 2.0F * ClickGuiModule.CLICK_GUI_SCALE, iy + 4.0F * ClickGuiModule.CLICK_GUI_SCALE, whiteText);
+   }
 
-    /**
-     * @param context
-     * @param ix
-     * @param iy
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    @Override
-    public void render(GuiGraphics context, float ix, float iy, float mouseX,
-                       float mouseY, float delta)
-    {
-        setHeight(RenderManager.textHeight() + 4.0f);
-        x = ix;
-        y = iy;
-        Animation checkboxAnimation = config.getAnimation();
-        boolean state = isWithin(mouseX, mouseY);
-        if (state != hoverAnimation.getState())
-        {
-            hoverAnimation.setState(state);
-        }
-        int hoverAlpha = (int) (80 * Mth.clamp(hoverAnimation.getFactor(), 0.0f, 1.0f));
+   @Override
+   public void mouseClicked(double mouseX, double mouseY, int button) {
+      if (this.isWithin(mouseX, mouseY) && button == 0) {
+         boolean val = this.config.getValue();
+         this.config.setValue(!val);
+         if (ClickGuiModule.getInstance().getSounds()) {
+            Managers.SOUND.playSound(SoundManager.GUI_CLICK);
+         }
+      }
+   }
 
-        rect(context, checkboxAnimation.getFactor() > 0.01f ? ClickGuiModule.getInstance().getColor(100 + hoverAlpha, (float) checkboxAnimation.getFactor()) : new Color(hoverAlpha, hoverAlpha, hoverAlpha, hoverAlpha).getRGB());
-        int whiteText = -1;
-        drawStringScaled(context, config.getName(), (ix + (2.0f * ClickGuiModule.CLICK_GUI_SCALE)), (iy + (4.0f * ClickGuiModule.CLICK_GUI_SCALE)), whiteText);
-    }
+   @Override
+   public void mouseReleased(double mouseX, double mouseY, int button) {
+   }
 
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseClicked(double mouseX, double mouseY, int button)
-    {
-        if (isWithin(mouseX, mouseY))
-        {
-            if (button == 0)
-            {
-                boolean val = config.getValue();
-                config.setValue(!val);
+   @Override
+   public void keyPressed(int keyCode, int scanCode, int modifiers) {
+   }
 
-                if (ClickGuiModule.getInstance().getSounds())
-                {
-                    Managers.SOUND.playSound(SoundManager.GUI_CLICK);
-                }
-            }
-        }
-    }
-
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseReleased(double mouseX, double mouseY, int button)
-    {
-
-    }
-
-    /**
-     * @param keyCode
-     * @param scanCode
-     * @param modifiers
-     */
-    @Override
-    public void keyPressed(int keyCode, int scanCode, int modifiers)
-    {
-
-    }
-
-    @Override
-    public void charTyped(char character, int modifiers)
-    {
-
-    }
-
+   @Override
+   public void charTyped(char character, int modifiers) {
+   }
 }

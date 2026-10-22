@@ -14,80 +14,67 @@ import net.shoreline.client.mixin.accessor.AccessorFireworkRocketEntity;
 import net.shoreline.eventbus.annotation.EventListener;
 import net.shoreline.eventbus.event.StageEvent;
 
-/**
- * @author hockeyl8
- * @since 1.0
- */
-public final class FireworkBoostModule extends ToggleModule
-{
-    Config<Double> speedConfig = register(new NumberConfig<>("Speed", "The initial speed of the rocket.", 1.0, 1.5, 10.0));
-    Config<Boolean> accelerateConfig = register(new BooleanConfig("Accelerate", "Whether or not to accelerate the rocket.", false));
-    Config<Double> accelSpeedConfig = register(new NumberConfig<>("AccelSpeed", "The speed to accelerate the rocket at.", 0.1, 0.5, 5.0, () -> accelerateConfig.getValue()));
-    Config<Double> maxSpeedConfig = register(new NumberConfig<>("MaxSpeed", "The initial speed of the rocket.", 1.0, 3.0, 10.0, () -> accelerateConfig.getValue()));
+public final class FireworkBoostModule extends ToggleModule {
+   Config<Double> speedConfig = this.register(new NumberConfig<>("Speed", "The initial speed of the rocket.", 1.0, 1.5, 10.0));
+   Config<Boolean> accelerateConfig = this.register(new BooleanConfig("Accelerate", "Whether or not to accelerate the rocket.", false));
+   Config<Double> accelSpeedConfig = this.register(
+      new NumberConfig<>("AccelSpeed", "The speed to accelerate the rocket at.", 0.1, 0.5, 5.0, () -> this.accelerateConfig.getValue())
+   );
+   Config<Double> maxSpeedConfig = this.register(
+      new NumberConfig<>("MaxSpeed", "The initial speed of the rocket.", 1.0, 3.0, 10.0, () -> this.accelerateConfig.getValue())
+   );
+   private int tickCounter;
+   private double speed;
 
-    private int tickCounter;
-    private double speed;
+   public FireworkBoostModule() {
+      super("FireworkBoost", "Allows you to change the acceleration of your firework.", ModuleCategory.MOVEMENT);
+   }
 
-    public FireworkBoostModule()
-    {
-        super("FireworkBoost", "Allows you to change the acceleration of your firework.", ModuleCategory.MOVEMENT);
-    }
+   @Override
+   public void onDisable() {
+      this.speed = 0.0;
+   }
 
-    @Override
-    public void onDisable()
-    {
-        speed = 0.0f;
-    }
-
-    @EventListener
-    public void onTick(final TickEvent event)
-    {
-        if (event.getStage() != StageEvent.EventStage.PRE || mc.player.isInLava())
-        {
-            return;
-        }
-        if (isBoostedByRocket() && mc.player.isFallFlying())
-        {
-            final Vec3 vec3d = mc.player.getLookAngle();
-            final Vec3 vec3d2 = mc.player.getDeltaMovement();
-            if (accelerateConfig.getValue())
-            {
-                speed += accelSpeedConfig.getValue() * tickCounter;
-                if (speed < maxSpeedConfig.getValue())
-                {
-                    tickCounter++;
-                }
-                else
-                {
-                    speed = Mth.clamp(speed, 0, maxSpeedConfig.getValue());
-                }
+   @EventListener
+   public void onTick(TickEvent event) {
+      if (event.getStage() == StageEvent.EventStage.PRE && !mc.player.isInLava()) {
+         if (this.isBoostedByRocket() && mc.player.isFallFlying()) {
+            Vec3 vec3d = mc.player.getLookAngle();
+            Vec3 vec3d2 = mc.player.getDeltaMovement();
+            if (this.accelerateConfig.getValue()) {
+               this.speed = this.speed + this.accelSpeedConfig.getValue() * this.tickCounter;
+               if (this.speed < this.maxSpeedConfig.getValue()) {
+                  this.tickCounter++;
+               } else {
+                  this.speed = Mth.clamp(this.speed, 0.0, this.maxSpeedConfig.getValue());
+               }
+            } else {
+               this.speed = this.speedConfig.getValue();
             }
-            else
-            {
-                speed = speedConfig.getValue();
-            }
-            mc.player.setDeltaMovement(vec3d2.add(
-                    vec3d.x * 0.1 + (vec3d.x * speed - vec3d2.x) * 0.5,
-                    vec3d.y * 0.1 + (vec3d.y * speed - vec3d2.y) * 0.5,
-                    vec3d.z * 0.1 + (vec3d.z * speed - vec3d2.z) * 0.5));
-        }
-        else
-        {
-            speed = 0.0f;
-        }
-    }
 
-    private boolean isBoostedByRocket()
-    {
-        for (Entity entity : mc.level.entitiesForRendering())
-        {
-            if (entity instanceof FireworkRocketEntity rocket
-                    && ((AccessorFireworkRocketEntity) rocket).hookWasShotByEntity()
-                    && ((AccessorFireworkRocketEntity) rocket).hookGetShooter() == mc.player)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
+            mc.player
+               .setDeltaMovement(
+                  vec3d2.add(
+                     vec3d.x * 0.1 + (vec3d.x * this.speed - vec3d2.x) * 0.5,
+                     vec3d.y * 0.1 + (vec3d.y * this.speed - vec3d2.y) * 0.5,
+                     vec3d.z * 0.1 + (vec3d.z * this.speed - vec3d2.z) * 0.5
+                  )
+               );
+         } else {
+            this.speed = 0.0;
+         }
+      }
+   }
+
+   private boolean isBoostedByRocket() {
+      for (Entity entity : mc.level.entitiesForRendering()) {
+         if (entity instanceof FireworkRocketEntity rocket
+            && ((AccessorFireworkRocketEntity)rocket).hookWasShotByEntity()
+            && ((AccessorFireworkRocketEntity)rocket).hookGetShooter() == mc.player) {
+            return true;
+         }
+      }
+
+      return false;
+   }
 }

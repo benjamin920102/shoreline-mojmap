@@ -11,18 +11,14 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(ItemRenderer.class)
-public interface AccessorItemRenderer
-{
-    /**
-     * @return
-     */
-    @Accessor("blockEntityRenderer")
-    BlockEntityWithoutLevelRenderer hookGetBuiltinModelItemRenderer();
+@Mixin({ItemRenderer.class})
+public interface AccessorItemRenderer {
+   @Accessor("blockEntityRenderer")
+   BlockEntityWithoutLevelRenderer hookGetBuiltinModelItemRenderer();
 
-    @Accessor("itemColors")
-    ItemColors hookGetItemColors();
+   @Accessor("itemColors")
+   ItemColors hookGetItemColors();
 
-    @Invoker("renderModelLists")
-    void hookRenderBakedItemModel(BakedModel model, ItemStack stack, int light, int overlay, PoseStack matrices, VertexConsumer vertices);
+   @Invoker("renderModelLists")
+   void hookRenderBakedItemModel(BakedModel var1, ItemStack var2, int var3, int var4, PoseStack var5, VertexConsumer var6);
 }

@@ -1,5 +1,7 @@
 package net.shoreline.client.mixin.render.block.entity;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import java.util.function.Function;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.ConduitRenderer;
@@ -9,33 +11,54 @@ import net.shoreline.client.api.render.layers.RenderLayersClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import java.util.function.Function;
 
-@Mixin(ConduitRenderer.class)
-public class MixinConduitBlockEntityRenderer
-{
-    @Redirect(method = "render(Lnet/minecraft/world/level/block/entity/ConduitBlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;)Lcom/mojang/blaze3d/vertex/VertexConsumer;", ordinal = 0))
-    private VertexConsumer hookRender(Material instance, MultiBufferSource vertexConsumers, Function<ResourceLocation, RenderType> layerFactory)
-    {
-        return instance.buffer(vertexConsumers, RenderLayersClient.ENTITY_SOLID);
-    }
+@Mixin({ConduitRenderer.class})
+public class MixinConduitBlockEntityRenderer {
+   @Redirect(
+      method = {"render(Lnet/minecraft/world/level/block/entity/ConduitBlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V"},
+      at = @At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;)Lcom/mojang/blaze3d/vertex/VertexConsumer;",
+         ordinal = 0
+      )
+   )
+   private VertexConsumer hookRender(Material instance, MultiBufferSource vertexConsumers, Function<ResourceLocation, RenderType> layerFactory) {
+      return instance.buffer(vertexConsumers, RenderLayersClient.ENTITY_SOLID);
+   }
 
-    @Redirect(method = "render(Lnet/minecraft/world/level/block/entity/ConduitBlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;)Lcom/mojang/blaze3d/vertex/VertexConsumer;", ordinal = 1))
-    private VertexConsumer hookRender$1(Material instance, MultiBufferSource vertexConsumers, Function<ResourceLocation, RenderType> layerFactory)
-    {
-        return instance.buffer(vertexConsumers, RenderLayersClient.ENTITY_CUTOUT_NO_CULL);
-    }
+   @Redirect(
+      method = {"render(Lnet/minecraft/world/level/block/entity/ConduitBlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V"},
+      at = @At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;)Lcom/mojang/blaze3d/vertex/VertexConsumer;",
+         ordinal = 1
+      )
+   )
+   private VertexConsumer hookRender$1(Material instance, MultiBufferSource vertexConsumers, Function<ResourceLocation, RenderType> layerFactory) {
+      return instance.buffer(vertexConsumers, RenderLayersClient.ENTITY_CUTOUT_NO_CULL);
+   }
 
-    @Redirect(method = "render(Lnet/minecraft/world/level/block/entity/ConduitBlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;)Lcom/mojang/blaze3d/vertex/VertexConsumer;", ordinal = 2))
-    private VertexConsumer hookRender$2(Material instance, MultiBufferSource vertexConsumers, Function<ResourceLocation, RenderType> layerFactory)
-    {
-        return instance.buffer(vertexConsumers, RenderLayersClient.ENTITY_CUTOUT_NO_CULL);
-    }
+   @Redirect(
+      method = {"render(Lnet/minecraft/world/level/block/entity/ConduitBlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V"},
+      at = @At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;)Lcom/mojang/blaze3d/vertex/VertexConsumer;",
+         ordinal = 2
+      )
+   )
+   private VertexConsumer hookRender$2(Material instance, MultiBufferSource vertexConsumers, Function<ResourceLocation, RenderType> layerFactory) {
+      return instance.buffer(vertexConsumers, RenderLayersClient.ENTITY_CUTOUT_NO_CULL);
+   }
 
-    @Redirect(method = "render(Lnet/minecraft/world/level/block/entity/ConduitBlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;)Lcom/mojang/blaze3d/vertex/VertexConsumer;", ordinal = 3))
-    private VertexConsumer hookRender$3(Material instance, MultiBufferSource vertexConsumers, Function<ResourceLocation, RenderType> layerFactory)
-    {
-        return instance.buffer(vertexConsumers, RenderLayersClient.ENTITY_CUTOUT_NO_CULL);
-    }
+   @Redirect(
+      method = {"render(Lnet/minecraft/world/level/block/entity/ConduitBlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V"},
+      at = @At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;)Lcom/mojang/blaze3d/vertex/VertexConsumer;",
+         ordinal = 3
+      )
+   )
+   private VertexConsumer hookRender$3(Material instance, MultiBufferSource vertexConsumers, Function<ResourceLocation, RenderType> layerFactory) {
+      return instance.buffer(vertexConsumers, RenderLayersClient.ENTITY_CUTOUT_NO_CULL);
+   }
 }

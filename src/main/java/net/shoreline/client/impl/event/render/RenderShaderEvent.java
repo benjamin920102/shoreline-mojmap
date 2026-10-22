@@ -5,45 +5,26 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class RenderShaderEvent extends Event
-{
-    private final PoseStack matrices;
-    private final float tickDelta;
+public class RenderShaderEvent extends Event {
+   private final PoseStack matrices;
+   private final float tickDelta;
 
-    /**
-     * @param matrices
-     */
-    public RenderShaderEvent(PoseStack matrices, float tickDelta)
-    {
-        this.matrices = matrices;
-        this.tickDelta = tickDelta;
-    }
+   public RenderShaderEvent(PoseStack matrices, float tickDelta) {
+      this.matrices = matrices;
+      this.tickDelta = tickDelta;
+   }
 
-    /**
-     * @return
-     */
-    public PoseStack getMatrices()
-    {
-        return matrices;
-    }
+   public PoseStack getMatrices() {
+      return this.matrices;
+   }
 
-    /**
-     * @return
-     */
-    public float getTickDelta()
-    {
-        return tickDelta;
-    }
+   public float getTickDelta() {
+      return this.tickDelta;
+   }
 
-    public static class BlockEntities extends RenderShaderEvent
-    {
-        /**
-         * @param matrices
-         * @param tickDelta
-         */
-        public BlockEntities(PoseStack matrices, float tickDelta)
-        {
-            super(matrices, tickDelta);
-        }
-    }
+   public static class BlockEntities extends RenderShaderEvent {
+      public BlockEntities(PoseStack matrices, float tickDelta) {
+         super(matrices, tickDelta);
+      }
+   }
 }

@@ -14,95 +14,84 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.TickEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author ImLegiitXD
- * @since 1.0
- */
+public class AutoFrameDupeModule extends ToggleModule {
+   Config<Float> range = this.register(new NumberConfig<>("Range", "The maximum distance to interact with item frames", 1.0F, 5.0F, 7.0F));
+   Config<Integer> turns = this.register(new NumberConfig<>("Turns", "How many times to rotate the item in the frame", 1, 5, 10));
+   Config<Integer> ticks = this.register(new NumberConfig<>("Ticks", "Delay between interactions in ticks", 1, 5, 10));
+   Config<Boolean> switchxd = this.register(new BooleanConfig("Switch", "Automatically switch to shulker boxes when needed", true));
+   private int timeoutTicks = 0;
 
-// pasted from ???
-public class AutoFrameDupeModule extends ToggleModule
-{
-    Config<Float> range = register(new NumberConfig<>("Range", "The maximum distance to interact with item frames", 1f, 5f, 7f));
-    Config<Integer> turns = register(new NumberConfig<>("Turns", "How many times to rotate the item in the frame", 1, 5, 10));
-    Config<Integer> ticks = register(new NumberConfig<>("Ticks", "Delay between interactions in ticks", 1, 5, 10));
-    Config<Boolean> switchxd = register(new BooleanConfig("Switch", "Automatically switch to shulker boxes when needed", true));
+   public AutoFrameDupeModule() {
+      super("AutoFrameDupe", "Automatically dupes using frames", ModuleCategory.MISCELLANEOUS);
+   }
 
-    private int timeoutTicks = 0;
+   @EventListener
+   public void onTick(TickEvent event) {
+      if (mc.level != null && mc.player != null && mc.gameMode != null) {
+         for (Entity entity : mc.level.entitiesForRendering()) {
+            if (entity instanceof ItemFrame frame && mc.player.distanceTo(frame) <= this.range.getValue()) {
+               if (this.timeoutTicks >= this.ticks.getValue()) {
+                  ItemStack displayedItem = frame.getItem();
+                  boolean hasItem = !displayedItem.isEmpty();
+                  boolean isHolding = !mc.player.getMainHandItem().isEmpty();
+                  if (this.switchxd.getValue() && (!isHolding || !this.isShulkerBox(mc.player.getMainHandItem()))) {
+                     int shulkerSlot = this.findShulkers();
+                     if (shulkerSlot != -1) {
+                        mc.player.getInventory().selected = shulkerSlot;
+                        isHolding = true;
+                     }
+                  }
 
-    public AutoFrameDupeModule()
-    {
-        super("AutoFrameDupe", "Automatically dupes using frames", ModuleCategory.MISCELLANEOUS);
-    }
+                  if (!hasItem && isHolding) {
+                     mc.gameMode.interact(mc.player, frame, InteractionHand.MAIN_HAND);
+                  }
 
-    @EventListener
-    public void onTick(TickEvent event)
-    {
-        if (mc.level == null || mc.player == null || mc.gameMode == null) return;
-
-        for (Entity entity : mc.level.entitiesForRendering()) {
-            if (entity instanceof ItemFrame frame && mc.player.distanceTo(frame) <= range.getValue()) {
-                if (timeoutTicks >= ticks.getValue()) {
-                    ItemStack displayedItem = frame.getItem();
-                    boolean hasItem = !displayedItem.isEmpty();
-                    boolean isHolding = !mc.player.getMainHandItem().isEmpty();
-
-                    if (switchxd.getValue() && (!isHolding || !isShulkerBox(mc.player.getMainHandItem()))) {
-                        int shulkerSlot = findShulkers();
-                        if (shulkerSlot != -1) {
-                            mc.player.getInventory().selected = shulkerSlot;
-                            isHolding = true; 
-                        }
-                    }
-
-                    if (!hasItem && isHolding) {
+                  if (hasItem) {
+                     for (int i = 0; i < this.turns.getValue(); i++) {
                         mc.gameMode.interact(mc.player, frame, InteractionHand.MAIN_HAND);
-                    }
+                     }
 
-                    if (hasItem) {
-                        for (int i = 0; i < turns.getValue(); i++) {
-                            mc.gameMode.interact(mc.player, frame, InteractionHand.MAIN_HAND);
-                        }
-                        mc.gameMode.attack(mc.player, frame);
-                    }
+                     mc.gameMode.attack(mc.player, frame);
+                  }
 
-                    timeoutTicks = 0;
-                } else {
-                    timeoutTicks++;
-                }
+                  this.timeoutTicks = 0;
+               } else {
+                  this.timeoutTicks++;
+               }
             }
-        }
-    }
+         }
+      }
+   }
 
+   private boolean isShulkerBox(ItemStack stack) {
+      Item item = stack.getItem();
+      return item == Items.SHULKER_BOX
+         || item == Items.WHITE_SHULKER_BOX
+         || item == Items.ORANGE_SHULKER_BOX
+         || item == Items.MAGENTA_SHULKER_BOX
+         || item == Items.LIGHT_BLUE_SHULKER_BOX
+         || item == Items.YELLOW_SHULKER_BOX
+         || item == Items.LIME_SHULKER_BOX
+         || item == Items.PINK_SHULKER_BOX
+         || item == Items.GRAY_SHULKER_BOX
+         || item == Items.LIGHT_GRAY_SHULKER_BOX
+         || item == Items.CYAN_SHULKER_BOX
+         || item == Items.PURPLE_SHULKER_BOX
+         || item == Items.BLUE_SHULKER_BOX
+         || item == Items.BROWN_SHULKER_BOX
+         || item == Items.GREEN_SHULKER_BOX
+         || item == Items.RED_SHULKER_BOX
+         || item == Items.BLACK_SHULKER_BOX;
+   }
 
-    private boolean isShulkerBox(ItemStack stack) {
-        Item item = stack.getItem();
-        return item == Items.SHULKER_BOX ||
-                item == Items.WHITE_SHULKER_BOX ||
-                item == Items.ORANGE_SHULKER_BOX ||
-                item == Items.MAGENTA_SHULKER_BOX ||
-                item == Items.LIGHT_BLUE_SHULKER_BOX ||
-                item == Items.YELLOW_SHULKER_BOX ||
-                item == Items.LIME_SHULKER_BOX ||
-                item == Items.PINK_SHULKER_BOX ||
-                item == Items.GRAY_SHULKER_BOX ||
-                item == Items.LIGHT_GRAY_SHULKER_BOX ||
-                item == Items.CYAN_SHULKER_BOX ||
-                item == Items.PURPLE_SHULKER_BOX ||
-                item == Items.BLUE_SHULKER_BOX ||
-                item == Items.BROWN_SHULKER_BOX ||
-                item == Items.GREEN_SHULKER_BOX ||
-                item == Items.RED_SHULKER_BOX ||
-                item == Items.BLACK_SHULKER_BOX;
-    }
+   private int findShulkers() {
+      for (int i = 0; i < 9; i++) {
+         ItemStack stack = mc.player.getInventory().getItem(i);
+         if (this.isShulkerBox(stack)) {
+            return i;
+         }
+      }
 
-    private int findShulkers() {
-        for (int i = 0; i < 9; i++) {
-            ItemStack stack = mc.player.getInventory().getItem(i);
-            if (isShulkerBox(stack)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
+      return -1;
+   }
 }

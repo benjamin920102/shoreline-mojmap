@@ -9,45 +9,33 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.render.item.RenderFirstPersonEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class ViewModelModule extends ToggleModule
-{
+public class ViewModelModule extends ToggleModule {
+   Config<Float> positionXConfig = this.register(new NumberConfig<>("X", "Translation in x-direction", -3.0F, 0.0F, 3.0F));
+   Config<Float> positionYConfig = this.register(new NumberConfig<>("Y", "Translation in y-direction", -3.0F, 0.0F, 3.0F));
+   Config<Float> positionZConfig = this.register(new NumberConfig<>("Z", "Translation in z-direction", -3.0F, 0.0F, 3.0F));
+   Config<Float> scaleXConfig = this.register(new NumberConfig<>("ScaleX", "Scaling in x-direction", 0.1F, 1.0F, 2.0F));
+   Config<Float> scaleYConfig = this.register(new NumberConfig<>("ScaleY", "Scaling in y-direction", 0.1F, 1.0F, 2.0F));
+   Config<Float> scaleZConfig = this.register(new NumberConfig<>("ScaleZ", "Scaling in z-direction", 0.1F, 1.0F, 2.0F));
+   Config<Float> rotateXConfig = this.register(new NumberConfig<>("RotateX", "Rotation in x-direction", -180.0F, 0.0F, 180.0F));
+   Config<Float> rotateYConfig = this.register(new NumberConfig<>("RotateY", "Rotation in y-direction", -180.0F, 0.0F, 180.0F));
+   Config<Float> rotateZConfig = this.register(new NumberConfig<>("RotateZ", "Rotation in z-direction", -180.0F, 0.0F, 180.0F));
 
-    // Config<Boolean> eatingConfig = register(new BooleanConfig("Eating", "Modifies eating transformations", true);
-    Config<Float> positionXConfig = register(new NumberConfig<>("X", "Translation in x-direction", -3.0f, 0.0f, 3.0f));
-    Config<Float> positionYConfig = register(new NumberConfig<>("Y", "Translation in y-direction", -3.0f, 0.0f, 3.0f));
-    Config<Float> positionZConfig = register(new NumberConfig<>("Z", "Translation in z-direction", -3.0f, 0.0f, 3.0f));
-    Config<Float> scaleXConfig = register(new NumberConfig<>("ScaleX", "Scaling in x-direction", 0.1f, 1.0f, 2.0f));
-    Config<Float> scaleYConfig = register(new NumberConfig<>("ScaleY", "Scaling in y-direction", 0.1f, 1.0f, 2.0f));
-    Config<Float> scaleZConfig = register(new NumberConfig<>("ScaleZ", "Scaling in z-direction", 0.1f, 1.0f, 2.0f));
-    Config<Float> rotateXConfig = register(new NumberConfig<>("RotateX", "Rotation in x-direction", -180.0f, 0.0f, 180.0f));
-    Config<Float> rotateYConfig = register(new NumberConfig<>("RotateY", "Rotation in y-direction", -180.0f, 0.0f, 180.0f));
-    Config<Float> rotateZConfig = register(new NumberConfig<>("RotateZ", "Rotation in z-direction", -180.0f, 0.0f, 180.0f));
+   public ViewModelModule() {
+      super("ViewModel", "Changes the first-person viewmodel", ModuleCategory.RENDER);
+   }
 
-    public ViewModelModule()
-    {
-        super("ViewModel", "Changes the first-person viewmodel", ModuleCategory.RENDER);
-    }
-
-    @EventListener
-    public void onRenderFirstPerson(RenderFirstPersonEvent event)
-    {
-        event.matrices.scale(scaleXConfig.getValue(), scaleYConfig.getValue(), scaleZConfig.getValue());
-        event.matrices.mulPose(Axis.XP.rotationDegrees(rotateXConfig.getValue()));
-        if (event.hand == InteractionHand.MAIN_HAND)
-        {
-            event.matrices.translate(positionXConfig.getValue(), positionYConfig.getValue(), positionZConfig.getValue());
-            event.matrices.mulPose(Axis.YP.rotationDegrees(rotateYConfig.getValue()));
-            event.matrices.mulPose(Axis.ZP.rotationDegrees(rotateZConfig.getValue()));
-        }
-        else
-        {
-            event.matrices.translate(-positionXConfig.getValue(), positionYConfig.getValue(), positionZConfig.getValue());
-            event.matrices.mulPose(Axis.YP.rotationDegrees(-rotateYConfig.getValue()));
-            event.matrices.mulPose(Axis.ZP.rotationDegrees(-rotateZConfig.getValue()));
-        }
-    }
+   @EventListener
+   public void onRenderFirstPerson(RenderFirstPersonEvent event) {
+      event.matrices.scale(this.scaleXConfig.getValue(), this.scaleYConfig.getValue(), this.scaleZConfig.getValue());
+      event.matrices.mulPose(Axis.XP.rotationDegrees(this.rotateXConfig.getValue()));
+      if (event.hand == InteractionHand.MAIN_HAND) {
+         event.matrices.translate(this.positionXConfig.getValue(), this.positionYConfig.getValue(), this.positionZConfig.getValue());
+         event.matrices.mulPose(Axis.YP.rotationDegrees(this.rotateYConfig.getValue()));
+         event.matrices.mulPose(Axis.ZP.rotationDegrees(this.rotateZConfig.getValue()));
+      } else {
+         event.matrices.translate(-this.positionXConfig.getValue(), this.positionYConfig.getValue(), this.positionZConfig.getValue());
+         event.matrices.mulPose(Axis.YP.rotationDegrees(-this.rotateYConfig.getValue()));
+         event.matrices.mulPose(Axis.ZP.rotationDegrees(-this.rotateZConfig.getValue()));
+      }
+   }
 }

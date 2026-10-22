@@ -7,37 +7,25 @@ import net.shoreline.client.api.command.Command;
 import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.chat.ChatUtil;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class VClipCommand extends Command
-{
-    /**
-     *
-     */
-    public VClipCommand()
-    {
-        super("VClip", "Vertically clips the player", literal("vclip"));
-    }
+public class VClipCommand extends Command {
+   public VClipCommand() {
+      super("VClip", "Vertically clips the player", literal("vclip"));
+   }
 
-    @Override
-    public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder)
-    {
-        builder.then(argument("distance", DoubleArgumentType.doubleArg()).executes(c ->
-        {
-            double dist = DoubleArgumentType.getDouble(c, "distance");
-            double y = Managers.POSITION.getY();
-            if (Math.abs(y) != 256)
-            {
-                Managers.POSITION.setPositionY(y + dist);
-                ChatUtil.clientSendMessage("Vertically clipped §s" + dist + "§f blocks");
-            }
-            return 1;
-        })).executes(c ->
-        {
-            ChatUtil.error("Must provide distance!");
-            return 1;
-        });
-    }
+   @Override
+   public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
+      ((LiteralArgumentBuilder)builder.then(argument("distance", DoubleArgumentType.doubleArg()).executes(c -> {
+         double dist = DoubleArgumentType.getDouble(c, "distance");
+         double y = Managers.POSITION.getY();
+         if (Math.abs(y) != 256.0) {
+            Managers.POSITION.setPositionY(y + dist);
+            ChatUtil.clientSendMessage("Vertically clipped §s" + dist + "§f blocks");
+         }
+
+         return 1;
+      }))).executes(c -> {
+         ChatUtil.error("Must provide distance!");
+         return 1;
+      });
+   }
 }

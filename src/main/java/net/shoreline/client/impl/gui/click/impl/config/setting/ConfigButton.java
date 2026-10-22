@@ -6,56 +6,24 @@ import net.shoreline.client.impl.gui.click.component.Button;
 import net.shoreline.client.impl.gui.click.impl.config.CategoryFrame;
 import net.shoreline.client.impl.gui.click.impl.config.ModuleButton;
 
-/**
- * @param <T>
- * @author linus
- * @since 1.0
- */
-public abstract class ConfigButton<T> extends Button
-{
-    //
-    protected final Config<T> config;
-    protected final ModuleButton moduleButton;
+public abstract class ConfigButton<T> extends Button {
+   protected final Config<T> config;
+   protected final ModuleButton moduleButton;
 
-    /**
-     * @param frame
-     * @param config
-     */
-    public ConfigButton(CategoryFrame frame, ModuleButton moduleButton, Config<T> config, float x, float y)
-    {
-        super(frame, x, y, 99.0f, 13.0f);
-        this.moduleButton = moduleButton;
-        this.config = config;
-    }
+   public ConfigButton(CategoryFrame frame, ModuleButton moduleButton, Config<T> config, float x, float y) {
+      super(frame, x, y, 99.0F, 13.0F);
+      this.moduleButton = moduleButton;
+      this.config = config;
+   }
 
-    /**
-     * @param context
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    @Override
-    public void render(GuiGraphics context, float mouseX, float mouseY, float delta)
-    {
-        render(context, x, y, mouseX, mouseY, delta);
-    }
+   @Override
+   public void render(GuiGraphics context, float mouseX, float mouseY, float delta) {
+      this.render(context, this.x, this.y, mouseX, mouseY, delta);
+   }
 
-    /**
-     * @param context
-     * @param ix
-     * @param iy
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    public abstract void render(GuiGraphics context, float ix, float iy,
-                                float mouseX, float mouseY, float delta);
+   public abstract void render(GuiGraphics var1, float var2, float var3, float var4, float var5, float var6);
 
-    /**
-     * @return
-     */
-    public Config<T> getConfig()
-    {
-        return config;
-    }
+   public Config<T> getConfig() {
+      return this.config;
+   }
 }

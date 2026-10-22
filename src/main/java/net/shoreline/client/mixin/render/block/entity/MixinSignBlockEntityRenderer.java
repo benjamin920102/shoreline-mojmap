@@ -12,18 +12,28 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(SignRenderer.class)
-public class MixinSignBlockEntityRenderer
-{
-    @Inject(method = "renderSignText", at = @At(value = "HEAD"), cancellable = true)
-    private void hookRenderText(BlockPos pos, SignText signText, PoseStack matrices, MultiBufferSource vertexConsumers,
-                                int light, int lineHeight, int lineWidth, boolean front, CallbackInfo ci)
-    {
-        RenderSignTextEvent renderSignTextEvent = new RenderSignTextEvent();
-        EventBus.INSTANCE.dispatch(renderSignTextEvent);
-        if (renderSignTextEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+@Mixin({SignRenderer.class})
+public class MixinSignBlockEntityRenderer {
+   @Inject(
+      method = {"renderSignText(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/entity/SignText;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IIIZ)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookRenderText(
+      BlockPos pos,
+      SignText signText,
+      PoseStack matrices,
+      MultiBufferSource vertexConsumers,
+      int light,
+      int lineHeight,
+      int lineWidth,
+      boolean front,
+      CallbackInfo ci
+   ) {
+      RenderSignTextEvent renderSignTextEvent = new RenderSignTextEvent();
+      EventBus.INSTANCE.dispatch(renderSignTextEvent);
+      if (renderSignTextEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 }

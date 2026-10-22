@@ -7,22 +7,18 @@ import net.shoreline.client.init.Managers;
 import net.shoreline.eventbus.EventBus;
 import net.shoreline.eventbus.annotation.EventListener;
 
-public class EventManager
-{
-    public EventManager()
-    {
-        EventBus.INSTANCE.subscribe(this);
-    }
+public class EventManager {
+   public EventManager() {
+      EventBus.INSTANCE.subscribe(this);
+   }
 
-    @EventListener
-    public void onGameFinishedInit(FinishLoadingEvent event)
-    {
-        Fonts.init();
-    }
+   @EventListener
+   public void onGameFinishedInit(FinishLoadingEvent event) {
+      Fonts.init();
+   }
 
-    @EventListener
-    public void onReloadShader(RenderWorldEvent.Hand event)
-    {
-        Managers.SHADER.reloadShaders();
-    }
+   @EventListener
+   public void onReloadShader(RenderWorldEvent.Hand event) {
+      Managers.SHADER.reloadShaders();
+   }
 }

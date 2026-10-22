@@ -11,13 +11,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(BlockEntityRenderDispatcher.class)
-public class MixinBlockEntityRenderDispatcher
-{
-    @Inject(method = "render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V", at = @At(value = "HEAD"))
-    private void hookRender(BlockEntity blockEntity, float tickDelta, PoseStack matrices, MultiBufferSource vertexConsumers, CallbackInfo ci)
-    {
-        RenderBlockEntityEvent renderBlockEntityEvent = new RenderBlockEntityEvent(blockEntity);
-        EventBus.INSTANCE.dispatch(renderBlockEntityEvent);
-    }
+@Mixin({BlockEntityRenderDispatcher.class})
+public class MixinBlockEntityRenderDispatcher {
+   @Inject(
+      method = {"render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V"},
+      at = {@At("HEAD")}
+   )
+   private void hookRender(BlockEntity blockEntity, float tickDelta, PoseStack matrices, MultiBufferSource vertexConsumers, CallbackInfo ci) {
+      RenderBlockEntityEvent renderBlockEntityEvent = new RenderBlockEntityEvent(blockEntity);
+      EventBus.INSTANCE.dispatch(renderBlockEntityEvent);
+   }
 }

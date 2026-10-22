@@ -3,19 +3,9 @@ package net.shoreline.client.impl.imixin;
 import net.minecraft.world.entity.Entity;
 import net.shoreline.client.util.network.InteractType;
 
-/**
- *
- */
 @IMixin
-public interface IPlayerInteractEntityC2SPacket
-{
-    /**
-     * @return
-     */
-    Entity getEntity();
+public interface IPlayerInteractEntityC2SPacket {
+   Entity getEntity();
 
-    /**
-     * @return
-     */
-    InteractType getType();
+   InteractType getType();
 }

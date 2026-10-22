@@ -11,13 +11,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(Item.class)
-public class MixinItem
-{
-    @Inject(method = "finishUsingItem", at = @At(value = "HEAD"))
-    private void hookFinishUsing(ItemStack stack, Level world, LivingEntity user, CallbackInfoReturnable<ItemStack> cir)
-    {
-        FinishUsingEvent finishUsingEvent = new FinishUsingEvent(stack);
-        EventBus.INSTANCE.dispatch(finishUsingEvent);
-    }
+@Mixin({Item.class})
+public class MixinItem {
+   @Inject(
+      method = {"finishUsingItem(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;)Lnet/minecraft/world/item/ItemStack;"},
+      at = {@At("HEAD")}
+   )
+   private void hookFinishUsing(ItemStack stack, Level world, LivingEntity user, CallbackInfoReturnable<ItemStack> cir) {
+      FinishUsingEvent finishUsingEvent = new FinishUsingEvent(stack);
+      EventBus.INSTANCE.dispatch(finishUsingEvent);
+   }
 }

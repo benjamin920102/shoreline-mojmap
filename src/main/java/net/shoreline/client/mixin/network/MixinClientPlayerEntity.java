@@ -6,15 +6,29 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.PosRot;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Rot;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.StatusOnly;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket.Action;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.phys.Vec3;
 import net.shoreline.client.impl.event.entity.SwingEvent;
 import net.shoreline.client.impl.event.entity.player.PlayerMoveEvent;
-import net.shoreline.client.impl.event.network.*;
+import net.shoreline.client.impl.event.network.DismountVehicleEvent;
+import net.shoreline.client.impl.event.network.EncodeYawEvent;
+import net.shoreline.client.impl.event.network.MountJumpStrengthEvent;
+import net.shoreline.client.impl.event.network.MovementPacketsEvent;
+import net.shoreline.client.impl.event.network.MovementSlowdownEvent;
+import net.shoreline.client.impl.event.network.PlayerTickEvent;
+import net.shoreline.client.impl.event.network.PlayerUpdateEvent;
+import net.shoreline.client.impl.event.network.PushOutOfBlocksEvent;
+import net.shoreline.client.impl.event.network.SetCurrentHandEvent;
+import net.shoreline.client.impl.event.network.SprintCancelEvent;
+import net.shoreline.client.impl.event.network.TickMovementEvent;
 import net.shoreline.client.impl.imixin.IClientPlayerEntity;
 import net.shoreline.client.util.Globals;
 import net.shoreline.eventbus.EventBus;
@@ -26,354 +40,306 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.At.Shift;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/**
- * @author linus
- * @see LocalPlayer
- * @since 1.0
- */
-@Mixin(LocalPlayer.class)
-public abstract class MixinClientPlayerEntity extends AbstractClientPlayer implements Globals, IClientPlayerEntity
-{
-    //
-    @Shadow
-    @Final
-    public ClientPacketListener connection;
-    @Shadow
-    public double xLast;
-    @Shadow
-    public double yLast1;
-    @Shadow
-    public double zLast;
-    @Shadow
-    public Input input;
-    //
-    @Shadow
-    @Final
-    protected Minecraft minecraft;
-    // Last tick values
-    @Shadow
-    private boolean wasShiftKeyDown;
-    @Shadow
-    private float yRotLast;
-    @Shadow
-    private float xRotLast;
-    @Shadow
-    private boolean lastOnGround;
-    //
-    @Shadow
-    private int positionReminder;
-    @Shadow
-    private boolean autoJumpEnabled;
-    //
-    @Unique
-    private boolean ticking;
+@Mixin({LocalPlayer.class})
+public abstract class MixinClientPlayerEntity extends AbstractClientPlayer implements Globals, IClientPlayerEntity {
+   @Shadow
+   @Final
+   public ClientPacketListener connection;
+   @Shadow
+   public double xLast;
+   @Shadow
+   public double yLast1;
+   @Shadow
+   public double zLast;
+   @Shadow
+   public Input input;
+   @Shadow
+   @Final
+   protected Minecraft minecraft;
+   @Shadow
+   private boolean wasShiftKeyDown;
+   @Shadow
+   private float yRotLast;
+   @Shadow
+   private float xRotLast;
+   @Shadow
+   private boolean lastOnGround;
+   @Shadow
+   private int positionReminder;
+   @Shadow
+   private boolean autoJumpEnabled;
+   @Unique
+   private boolean ticking;
 
-    /**
-     *
-     */
-    public MixinClientPlayerEntity()
-    {
-        // Treating this class as ClientPlayerEntity with mc.player info works
-        // Need a better solution
-        super(Minecraft.getInstance().level,
-                Minecraft.getInstance().player.getGameProfile());
-    }
+   public MixinClientPlayerEntity() {
+      super(Minecraft.getInstance().level, Minecraft.getInstance().player.getGameProfile());
+   }
 
-    //
-    @Shadow
-    protected abstract void sendIsSprintingIfNeeded();
+   @Shadow
+   protected abstract void sendIsSprintingIfNeeded();
 
-    //
-    @Shadow
-    public abstract boolean isShiftKeyDown();
+   @Shadow
+   @Override
+   public abstract boolean isShiftKeyDown();
 
-    @Shadow
-    protected abstract boolean isControlledCamera();
+   @Shadow
+   protected abstract boolean isControlledCamera();
 
-    //
-    @Shadow
-    protected abstract void updateAutoJump(float dx, float dz);
+   @Shadow
+   protected abstract void updateAutoJump(float var1, float var2);
 
-    //
-    @Shadow
-    public abstract void tick();
+   @Shadow
+   @Override
+   public abstract void tick();
 
-    //
-    @Shadow
-    protected abstract void sendPosition();
+   @Shadow
+   protected abstract void sendPosition();
 
-    /**
-     * @param ci
-     */
-    @Inject(method = "sendPosition", at = @At(value = "HEAD"), cancellable = true)
-    private void hookSendMovementPackets(CallbackInfo ci)
-    {
-        PlayerUpdateEvent playerUpdateEvent = new PlayerUpdateEvent();
-        playerUpdateEvent.setStage(StageEvent.EventStage.PRE);
-        EventBus.INSTANCE.dispatch(playerUpdateEvent);
-        // Rotation spoof
-        MovementPacketsEvent movementPacketsEvent = new MovementPacketsEvent(mc.player.getX(), mc.player.getY(),
-                mc.player.getZ(), mc.player.getYRot(), mc.player.getXRot(), mc.player.onGround());
-        EventBus.INSTANCE.dispatch(movementPacketsEvent);
-        double x = movementPacketsEvent.getX();
-        double y = movementPacketsEvent.getY();
-        double z = movementPacketsEvent.getZ();
-        float yaw = movementPacketsEvent.getYaw();
-        float pitch = movementPacketsEvent.getPitch();
-        boolean ground = movementPacketsEvent.getOnGround();
+   @Inject(
+      method = {"sendPosition()V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookSendMovementPackets(CallbackInfo ci) {
+      PlayerUpdateEvent playerUpdateEvent = new PlayerUpdateEvent();
+      playerUpdateEvent.setStage(StageEvent.EventStage.PRE);
+      EventBus.INSTANCE.dispatch(playerUpdateEvent);
+      MovementPacketsEvent movementPacketsEvent = new MovementPacketsEvent(
+         mc.player.getX(), mc.player.getY(), mc.player.getZ(), mc.player.getYRot(), mc.player.getXRot(), mc.player.onGround()
+      );
+      EventBus.INSTANCE.dispatch(movementPacketsEvent);
+      double x = movementPacketsEvent.getX();
+      double y = movementPacketsEvent.getY();
+      double z = movementPacketsEvent.getZ();
+      float yaw = movementPacketsEvent.getYaw();
+      float pitch = movementPacketsEvent.getPitch();
+      boolean ground = movementPacketsEvent.getOnGround();
+      EncodeYawEvent encodeYawEvent = new EncodeYawEvent();
+      EventBus.INSTANCE.dispatch(encodeYawEvent);
+      if (encodeYawEvent.isCanceled()) {
+         yaw += 3.6E7F;
+      }
 
-        EncodeYawEvent encodeYawEvent = new EncodeYawEvent();
-        EventBus.INSTANCE.dispatch(encodeYawEvent);
-        if (encodeYawEvent.isCanceled())
-        {
-            // yaw overflow, yes grim is retarded
-            yaw += 36000000.0f;
-        }
+      if (movementPacketsEvent.isCanceled() || encodeYawEvent.isCanceled()) {
+         ci.cancel();
+         this.sendIsSprintingIfNeeded();
+         boolean bl = this.isShiftKeyDown();
+         if (bl != this.wasShiftKeyDown) {
+            Action mode = bl ? Action.PRESS_SHIFT_KEY : Action.RELEASE_SHIFT_KEY;
+            this.connection.send(new ServerboundPlayerCommandPacket(this, mode));
+            this.wasShiftKeyDown = bl;
+         }
 
-        if (movementPacketsEvent.isCanceled() || encodeYawEvent.isCanceled())
-        {
-            ci.cancel();
-            sendIsSprintingIfNeeded();
-            boolean bl = isShiftKeyDown();
-            if (bl != wasShiftKeyDown)
-            {
-                ServerboundPlayerCommandPacket.Action mode = bl ? ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY :
-                        ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY;
-                connection.send(new ServerboundPlayerCommandPacket(this, mode));
-                wasShiftKeyDown = bl;
+         if (this.isControlledCamera()) {
+            double d = x - this.xLast;
+            double e = y - this.yLast1;
+            double f = z - this.zLast;
+            double g = yaw - this.yRotLast;
+            double h = pitch - this.xRotLast;
+            this.positionReminder++;
+            boolean bl2 = Mth.lengthSquared(d, e, f) > Mth.square(2.0E-4) || this.positionReminder >= 20;
+            boolean bl3 = g != 0.0 || h != 0.0;
+            if (this.isPassenger()) {
+               Vec3 vec3d = this.getDeltaMovement();
+               this.connection.send(new PosRot(vec3d.x, -999.0, vec3d.z, this.getYRot(), this.getXRot(), ground));
+               bl2 = false;
+            } else if (bl2 && bl3) {
+               this.connection.send(new PosRot(x, y, z, yaw, pitch, ground));
+            } else if (bl2) {
+               this.connection.send(new Pos(x, y, z, ground));
+            } else if (bl3) {
+               this.connection.send(new Rot(yaw, pitch, ground));
+            } else if (this.lastOnGround != this.onGround()) {
+               this.connection.send(new StatusOnly(ground));
             }
-            if (isControlledCamera())
-            {
-                double d = x - xLast;
-                double e = y - yLast1;
-                double f = z - zLast;
-                double g = yaw - yRotLast;
-                double h = pitch - xRotLast;
-                ++positionReminder;
-                boolean bl2 = Mth.lengthSquared(d, e, f) > Mth.square(2.0E-4) || positionReminder >= 20;
-                boolean bl3 = g != 0.0 || h != 0.0;
-                if (isPassenger())
-                {
-                    Vec3 vec3d = getDeltaMovement();
-                    connection.send(new ServerboundMovePlayerPacket.PosRot(vec3d.x, -999.0, vec3d.z, getYRot(), getXRot(), ground));
-                    bl2 = false;
-                }
-                else if (bl2 && bl3)
-                {
-                    connection.send(new ServerboundMovePlayerPacket.PosRot(x, y, z, yaw, pitch, ground));
-                }
-                else if (bl2)
-                {
-                    connection.send(new ServerboundMovePlayerPacket.Pos(x, y, z, ground));
-                }
-                else if (bl3)
-                {
-                    connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, ground));
-                }
-                else if (lastOnGround != onGround())
-                {
-                    connection.send(new ServerboundMovePlayerPacket.StatusOnly(ground));
-                }
-                if (bl2)
-                {
-                    xLast = x;
-                    yLast1 = y;
-                    zLast = z;
-                    positionReminder = 0;
-                }
-                if (bl3)
-                {
-                    yRotLast = yaw;
-                    xRotLast = pitch;
-                }
-                lastOnGround = ground;
-                autoJumpEnabled = minecraft.options.autoJump().get();
+
+            if (bl2) {
+               this.xLast = x;
+               this.yLast1 = y;
+               this.zLast = z;
+               this.positionReminder = 0;
             }
-        }
-        playerUpdateEvent.setStage(StageEvent.EventStage.POST);
-        EventBus.INSTANCE.dispatch(playerUpdateEvent);
-    }
 
-    /**
-     * @param ci
-     */
-    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;tick()V",
-            shift = At.Shift.BEFORE, ordinal = 0))
-    private void hookTickPre(CallbackInfo ci)
-    {
-        PlayerTickEvent playerTickEvent = new PlayerTickEvent();
-        EventBus.INSTANCE.dispatch(playerTickEvent);
-    }
-
-    /**
-     * @param ci
-     */
-    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;sendPosition()V", ordinal = 0, shift = At.Shift.AFTER))
-    private void hookTick(CallbackInfo ci)
-    {
-        if (ticking)
-        {
-            return;
-        }
-        TickMovementEvent tickMovementEvent = new TickMovementEvent();
-        EventBus.INSTANCE.dispatch(tickMovementEvent);
-        if (tickMovementEvent.isCanceled())
-        {
-            for (int i = 0; i < tickMovementEvent.getIterations(); i++)
-            {
-                ticking = true;
-                tick();
-                ticking = false;
-                sendPosition();
+            if (bl3) {
+               this.yRotLast = yaw;
+               this.xRotLast = pitch;
             }
-        }
-    }
 
-    /**
-     * @param ci
-     */
-    @Inject(method = "aiStep", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/Input;tick(ZF)V", shift = At.Shift.AFTER))
-    private void hookTickMovementPost(CallbackInfo ci)
-    {
-        MovementSlowdownEvent movementUpdateEvent =
-                new MovementSlowdownEvent(input);
-        EventBus.INSTANCE.dispatch(movementUpdateEvent);
-    }
+            this.lastOnGround = ground;
+            this.autoJumpEnabled = this.minecraft.options.autoJump().get();
+         }
+      }
 
-    /**
-     * @param movementType
-     * @param movement
-     * @param ci
-     */
-    @Inject(method = "move", at = @At(value = "HEAD"), cancellable = true)
-    private void hookMove(MoverType movementType, Vec3 movement,
-                          CallbackInfo ci)
-    {
-        final PlayerMoveEvent playerMoveEvent =
-                new PlayerMoveEvent(movementType, movement);
-        EventBus.INSTANCE.dispatch(playerMoveEvent);
-        if (playerMoveEvent.isCanceled())
-        {
-            ci.cancel();
-            double d = getX();
-            double e = getZ();
-            super.move(movementType, playerMoveEvent.getMovement());
-            updateAutoJump((float) (getX() - d), (float) (getZ() - e));
-        }
-    }
+      playerUpdateEvent.setStage(StageEvent.EventStage.POST);
+      EventBus.INSTANCE.dispatch(playerUpdateEvent);
+   }
 
-    /**
-     * @param x
-     * @param z
-     * @param ci
-     */
-    @Inject(method = "moveTowardsClosestSpace", at = @At(value = "HEAD"),
-            cancellable = true)
-    private void onPushOutOfBlocks(double x, double z, CallbackInfo ci)
-    {
-        PushOutOfBlocksEvent pushOutOfBlocksEvent = new PushOutOfBlocksEvent();
-        EventBus.INSTANCE.dispatch(pushOutOfBlocksEvent);
-        if (pushOutOfBlocksEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+   @Inject(
+      method = {"tick()V"},
+      at = {@At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/client/player/AbstractClientPlayer;tick()V",
+         shift = Shift.BEFORE,
+         ordinal = 0
+      )}
+   )
+   private void hookTickPre(CallbackInfo ci) {
+      PlayerTickEvent playerTickEvent = new PlayerTickEvent();
+      EventBus.INSTANCE.dispatch(playerTickEvent);
+   }
 
-    /**
-     * @param hand
-     * @param ci
-     */
-    @Inject(method = "startUsingItem", at = @At(value = "HEAD"))
-    private void hookSetCurrentHand(InteractionHand hand, CallbackInfo ci)
-    {
-        SetCurrentHandEvent setCurrentHandEvent = new SetCurrentHandEvent(hand);
-        EventBus.INSTANCE.dispatch(setCurrentHandEvent);
-    }
+   @Inject(
+      method = {"tick()V"},
+      at = {@At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/client/player/LocalPlayer;sendPosition()V",
+         ordinal = 0,
+         shift = Shift.AFTER
+      )}
+   )
+   private void hookTick(CallbackInfo ci) {
+      if (!this.ticking) {
+         TickMovementEvent tickMovementEvent = new TickMovementEvent();
+         EventBus.INSTANCE.dispatch(tickMovementEvent);
+         if (tickMovementEvent.isCanceled()) {
+            for (int i = 0; i < tickMovementEvent.getIterations(); i++) {
+               this.ticking = true;
+               this.tick();
+               this.ticking = false;
+               this.sendPosition();
+            }
+         }
+      }
+   }
 
-    /**
-     * @param instance
-     * @param b
-     */
-    @Redirect(method = "aiStep", at = @At(value = "INVOKE", target =
-            "Lnet/minecraft/client/player/LocalPlayer;setSprinting(Z)V",
-            ordinal = 3))
-    private void hookSetSprinting(LocalPlayer instance, boolean b)
-    {
-        final SprintCancelEvent sprintEvent = new SprintCancelEvent();
-        EventBus.INSTANCE.dispatch(sprintEvent);
-        if (sprintEvent.isCanceled())
-        {
-            instance.setSprinting(true);
-        }
-        else
-        {
-            instance.setSprinting(b);
-        }
-    }
+   @Inject(
+      method = {"aiStep()V"},
+      at = {@At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/client/player/Input;tick(ZF)V",
+         shift = Shift.AFTER
+      )}
+   )
+   private void hookTickMovementPost(CallbackInfo ci) {
+      MovementSlowdownEvent movementUpdateEvent = new MovementSlowdownEvent(this.input);
+      EventBus.INSTANCE.dispatch(movementUpdateEvent);
+   }
 
-    /**
-     * @param instance
-     * @return
-     */
-    @Redirect(method = "handleConfusionTransitionEffect", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;screen:Lnet/minecraft/client/gui/screens/Screen;"))
-    private Screen hookCurrentScreen(Minecraft instance)
-    {
-        //
-        return null;
-    }
+   @Inject(
+      method = {"move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookMove(MoverType movementType, Vec3 movement, CallbackInfo ci) {
+      PlayerMoveEvent playerMoveEvent = new PlayerMoveEvent(movementType, movement);
+      EventBus.INSTANCE.dispatch(playerMoveEvent);
+      if (playerMoveEvent.isCanceled()) {
+         ci.cancel();
+         double d = this.getX();
+         double e = this.getZ();
+         super.move(movementType, playerMoveEvent.getMovement());
+         this.updateAutoJump((float)(this.getX() - d), (float)(this.getZ() - e));
+      }
+   }
 
-    /**
-     * @param cir
-     */
-    @Inject(method = "getJumpRidingScale", at = @At(value = "HEAD"),
-            cancellable = true)
-    private void hookGetMountJumpStrength(CallbackInfoReturnable<Float> cir)
-    {
-        MountJumpStrengthEvent mountJumpStrengthEvent =
-                new MountJumpStrengthEvent();
-        EventBus.INSTANCE.dispatch(mountJumpStrengthEvent);
-        if (mountJumpStrengthEvent.isCanceled())
-        {
-            cir.cancel();
-            cir.setReturnValue(mountJumpStrengthEvent.getJumpStrength());
-        }
-    }
+   @Inject(
+      method = {"moveTowardsClosestSpace(DD)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void onPushOutOfBlocks(double x, double z, CallbackInfo ci) {
+      PushOutOfBlocksEvent pushOutOfBlocksEvent = new PushOutOfBlocksEvent();
+      EventBus.INSTANCE.dispatch(pushOutOfBlocksEvent);
+      if (pushOutOfBlocksEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 
-    /**
-     * @param hand
-     * @param ci
-     */
-    @Inject(method = "swing", at = @At(value = "RETURN"))
-    private void hookSwingHand(InteractionHand hand, CallbackInfo ci)
-    {
-        SwingEvent swingEvent = new SwingEvent(hand);
-        EventBus.INSTANCE.dispatch(swingEvent);
-    }
+   @Inject(
+      method = {"startUsingItem(Lnet/minecraft/world/InteractionHand;)V"},
+      at = {@At("HEAD")}
+   )
+   private void hookSetCurrentHand(InteractionHand hand, CallbackInfo ci) {
+      SetCurrentHandEvent setCurrentHandEvent = new SetCurrentHandEvent(hand);
+      EventBus.INSTANCE.dispatch(setCurrentHandEvent);
+   }
 
-    @Inject(method = "removeVehicle", at = @At(value = "HEAD"), cancellable = true)
-    private void hookDismountVehicle(CallbackInfo ci)
-    {
-        DismountVehicleEvent dismountVehicleEvent = new DismountVehicleEvent();
-        EventBus.INSTANCE.dispatch(dismountVehicleEvent);
-        if (dismountVehicleEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+   @Redirect(
+      method = {"aiStep()V"},
+      at = @At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/client/player/LocalPlayer;setSprinting(Z)V",
+         ordinal = 3
+      )
+   )
+   private void hookSetSprinting(LocalPlayer instance, boolean b) {
+      SprintCancelEvent sprintEvent = new SprintCancelEvent();
+      EventBus.INSTANCE.dispatch(sprintEvent);
+      if (sprintEvent.isCanceled()) {
+         instance.setSprinting(true);
+      } else {
+         instance.setSprinting(b);
+      }
+   }
 
-    @Override
-    public float getLastSpoofedYaw()
-    {
-        return yRotLast;
-    }
+   @Redirect(
+      method = {"handleConfusionTransitionEffect(Z)V"},
+      at = @At(
+         value = "FIELD",
+         target = "Lnet/minecraft/client/Minecraft;screen:Lnet/minecraft/client/gui/screens/Screen;"
+      )
+   )
+   private Screen hookCurrentScreen(Minecraft instance) {
+      return null;
+   }
 
-    @Override
-    public float getLastSpoofedPitch()
-    {
-        return xRotLast;
-    }
+   @Inject(
+      method = {"getJumpRidingScale()F"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookGetMountJumpStrength(CallbackInfoReturnable<Float> cir) {
+      MountJumpStrengthEvent mountJumpStrengthEvent = new MountJumpStrengthEvent();
+      EventBus.INSTANCE.dispatch(mountJumpStrengthEvent);
+      if (mountJumpStrengthEvent.isCanceled()) {
+         cir.cancel();
+         cir.setReturnValue(mountJumpStrengthEvent.getJumpStrength());
+      }
+   }
+
+   @Inject(
+      method = {"swing(Lnet/minecraft/world/InteractionHand;)V"},
+      at = {@At("RETURN")}
+   )
+   private void hookSwingHand(InteractionHand hand, CallbackInfo ci) {
+      SwingEvent swingEvent = new SwingEvent(hand);
+      EventBus.INSTANCE.dispatch(swingEvent);
+   }
+
+   @Inject(
+      method = {"removeVehicle()V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookDismountVehicle(CallbackInfo ci) {
+      DismountVehicleEvent dismountVehicleEvent = new DismountVehicleEvent();
+      EventBus.INSTANCE.dispatch(dismountVehicleEvent);
+      if (dismountVehicleEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
+
+   @Override
+   public float getLastSpoofedYaw() {
+      return this.yRotLast;
+   }
+
+   @Override
+   public float getLastSpoofedPitch() {
+      return this.xRotLast;
+   }
 }

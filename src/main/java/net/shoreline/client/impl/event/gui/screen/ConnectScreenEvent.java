@@ -4,25 +4,20 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.shoreline.eventbus.event.Event;
 
-public class ConnectScreenEvent extends Event
-{
+public class ConnectScreenEvent extends Event {
+   private final ServerAddress address;
+   private final ServerData info;
 
-    private final ServerAddress address;
-    private final ServerData info;
+   public ConnectScreenEvent(ServerAddress address, ServerData info) {
+      this.address = address;
+      this.info = info;
+   }
 
-    public ConnectScreenEvent(ServerAddress address, ServerData info)
-    {
-        this.address = address;
-        this.info = info;
-    }
+   public ServerAddress getAddress() {
+      return this.address;
+   }
 
-    public ServerAddress getAddress()
-    {
-        return address;
-    }
-
-    public ServerData getInfo()
-    {
-        return info;
-    }
+   public ServerData getInfo() {
+      return this.info;
+   }
 }

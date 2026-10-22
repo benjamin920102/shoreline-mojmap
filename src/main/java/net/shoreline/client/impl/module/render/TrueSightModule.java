@@ -8,25 +8,17 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.render.entity.RenderEntityInvisibleEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author xgraza
- * @since 1.0
- */
-public final class TrueSightModule extends ToggleModule
-{
-    Config<Boolean> onlyPlayersConfig = register(new BooleanConfig("OnlyPlayers", "Only reveal invisible players", true));
+public final class TrueSightModule extends ToggleModule {
+   Config<Boolean> onlyPlayersConfig = this.register(new BooleanConfig("OnlyPlayers", "Only reveal invisible players", true));
 
-    public TrueSightModule()
-    {
-        super("TrueSight", "Allows you to see invisible entities", ModuleCategory.RENDER);
-    }
+   public TrueSightModule() {
+      super("TrueSight", "Allows you to see invisible entities", ModuleCategory.RENDER);
+   }
 
-    @EventListener
-    public void onRenderEntityInvisible(final RenderEntityInvisibleEvent event)
-    {
-        if (event.getEntity().isInvisible() && (!onlyPlayersConfig.getValue() || event.getEntity() instanceof Player))
-        {
-            event.cancel();
-        }
-    }
+   @EventListener
+   public void onRenderEntityInvisible(RenderEntityInvisibleEvent event) {
+      if (event.getEntity().isInvisible() && (!this.onlyPlayersConfig.getValue() || event.getEntity() instanceof Player)) {
+         event.cancel();
+      }
+   }
 }

@@ -5,52 +5,29 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(ServerboundMovePlayerPacket.class)
-public interface AccessorPlayerMoveC2SPacket
-{
-    /**
-     * @param onGround
-     */
-    @Accessor("onGround")
-    @Mutable
-    void hookSetOnGround(boolean onGround);
+@Mixin({ServerboundMovePlayerPacket.class})
+public interface AccessorPlayerMoveC2SPacket {
+   @Accessor("onGround")
+   @Mutable
+   void hookSetOnGround(boolean var1);
 
-    /**
-     * @param x
-     */
-    @Accessor("x")
-    @Mutable
-    void hookSetX(double x);
+   @Accessor("x")
+   @Mutable
+   void hookSetX(double var1);
 
-    /**
-     * @param y
-     */
-    @Accessor("y")
-    @Mutable
-    void hookSetY(double y);
+   @Accessor("y")
+   @Mutable
+   void hookSetY(double var1);
 
-    /**
-     * @param z
-     */
-    @Accessor("z")
-    @Mutable
-    void hookSetZ(double z);
+   @Accessor("z")
+   @Mutable
+   void hookSetZ(double var1);
 
-    /**
-     * @param yaw
-     */
-    @Accessor("yRot")
-    @Mutable
-    void hookSetYaw(float yaw);
+   @Accessor("yRot")
+   @Mutable
+   void hookSetYaw(float var1);
 
-    /**
-     * @param pitch
-     */
-    @Accessor("xRot")
-    @Mutable
-    void hookSetPitch(float pitch);
+   @Accessor("xRot")
+   @Mutable
+   void hookSetPitch(float var1);
 }

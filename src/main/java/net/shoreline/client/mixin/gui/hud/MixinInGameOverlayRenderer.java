@@ -11,65 +11,44 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(ScreenEffectRenderer.class)
-public class MixinInGameOverlayRenderer
-{
-    /**
-     * @param client
-     * @param matrices
-     * @param ci
-     */
-    @Inject(method = "renderFire", at = @At(value = "HEAD"),
-            cancellable = true)
-    private static void hookRenderFireOverlay(Minecraft client, PoseStack matrices, CallbackInfo ci)
-    {
-        RenderOverlayEvent.Fire renderOverlayEvent =
-                new RenderOverlayEvent.Fire(null);
-        EventBus.INSTANCE.dispatch(renderOverlayEvent);
-        if (renderOverlayEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+@Mixin({ScreenEffectRenderer.class})
+public class MixinInGameOverlayRenderer {
+   @Inject(
+      method = {"renderFire(Lnet/minecraft/client/Minecraft;Lcom/mojang/blaze3d/vertex/PoseStack;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private static void hookRenderFireOverlay(Minecraft client, PoseStack matrices, CallbackInfo ci) {
+      RenderOverlayEvent.Fire renderOverlayEvent = new RenderOverlayEvent.Fire(null);
+      EventBus.INSTANCE.dispatch(renderOverlayEvent);
+      if (renderOverlayEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 
-    /**
-     * @param client
-     * @param matrices
-     * @param ci
-     */
-    @Inject(method = "renderWater", at = @At(value = "HEAD"),
-            cancellable = true)
-    private static void hookRenderUnderwaterOverlay(Minecraft client, PoseStack matrices,
-                                                    CallbackInfo ci)
-    {
-        RenderOverlayEvent.Water renderOverlayEvent =
-                new RenderOverlayEvent.Water(null);
-        EventBus.INSTANCE.dispatch(renderOverlayEvent);
-        if (renderOverlayEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+   @Inject(
+      method = {"renderWater(Lnet/minecraft/client/Minecraft;Lcom/mojang/blaze3d/vertex/PoseStack;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private static void hookRenderUnderwaterOverlay(Minecraft client, PoseStack matrices, CallbackInfo ci) {
+      RenderOverlayEvent.Water renderOverlayEvent = new RenderOverlayEvent.Water(null);
+      EventBus.INSTANCE.dispatch(renderOverlayEvent);
+      if (renderOverlayEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 
-    /**
-     * @param sprite
-     * @param matrices
-     * @param ci
-     */
-    @Inject(method = "renderTex", at = @At(value = "HEAD"),
-            cancellable = true)
-    private static void hookRenderFireOverlay(TextureAtlasSprite sprite, PoseStack matrices, CallbackInfo ci)
-    {
-        RenderOverlayEvent.Block renderOverlayEvent =
-                new RenderOverlayEvent.Block(null);
-        EventBus.INSTANCE.dispatch(renderOverlayEvent);
-        if (renderOverlayEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+   @Inject(
+      method = {"renderTex(Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;Lcom/mojang/blaze3d/vertex/PoseStack;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private static void hookRenderFireOverlay(TextureAtlasSprite sprite, PoseStack matrices, CallbackInfo ci) {
+      RenderOverlayEvent.Block renderOverlayEvent = new RenderOverlayEvent.Block(null);
+      EventBus.INSTANCE.dispatch(renderOverlayEvent);
+      if (renderOverlayEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 }

@@ -1,6 +1,8 @@
 package net.shoreline.client.impl.module.movement;
 
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.PosRot;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.shoreline.client.api.config.Config;
@@ -16,120 +18,88 @@ import net.shoreline.client.util.string.EnumFormatter;
 import net.shoreline.eventbus.annotation.EventListener;
 import net.shoreline.eventbus.event.StageEvent;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class NoFallModule extends ToggleModule
-{
+public class NoFallModule extends ToggleModule {
+   Config<NoFallModule.NoFallMode> modeConfig = this.register(
+      new EnumConfig<>("Mode", "The mode to prevent fall damage", NoFallModule.NoFallMode.ANTI, NoFallModule.NoFallMode.values())
+   );
+   private double groundedY;
 
-    //
-    Config<NoFallMode> modeConfig = register(new EnumConfig<>("Mode", "The mode to prevent fall damage", NoFallMode.ANTI, NoFallMode.values()));
+   public NoFallModule() {
+      super("NoFall", "Prevents all fall damage", ModuleCategory.MOVEMENT);
+   }
 
-    private double groundedY;
+   @Override
+   public String getModuleData() {
+      return EnumFormatter.formatEnum(this.modeConfig.getValue());
+   }
 
-    public NoFallModule()
-    {
-        super("NoFall", "Prevents all fall damage", ModuleCategory.MOVEMENT);
-    }
-
-    @Override
-    public String getModuleData()
-    {
-        return EnumFormatter.formatEnum(modeConfig.getValue());
-    }
-
-    @EventListener
-    public void onPlayerUpdate(PlayerUpdateEvent event)
-    {
-        if (event.getStage() != StageEvent.EventStage.PRE || !checkFalling())
-        {
-            return;
-        }
-        if (modeConfig.getValue() == NoFallMode.LIMIT)
-        {
-            if (mc.level.dimension() == Level.NETHER)
-            {
-                Managers.NETWORK.sendPacket(new ServerboundMovePlayerPacket.Pos(
-                        mc.player.getX(), 0, mc.player.getZ(), true));
+   @EventListener
+   public void onPlayerUpdate(PlayerUpdateEvent event) {
+      if (event.getStage() == StageEvent.EventStage.PRE && this.checkFalling()) {
+         if (this.modeConfig.getValue() == NoFallModule.NoFallMode.LIMIT) {
+            if (mc.level.dimension() == Level.NETHER) {
+               Managers.NETWORK.sendPacket(new Pos(mc.player.getX(), 0.0, mc.player.getZ(), true));
+            } else {
+               Managers.NETWORK.sendPacket(new Pos(0.0, 64.0, 0.0, true));
             }
-            else
-            {
-                Managers.NETWORK.sendPacket(new ServerboundMovePlayerPacket.Pos(0, 64, 0, true));
-            }
-            mc.player.fallDistance = 0.0f;
-        }
-        else if (modeConfig.getValue() == NoFallMode.GRIM)
-        {
-            Managers.NETWORK.sendPacket(new ServerboundMovePlayerPacket.PosRot(mc.player.getX(), mc.player.getY() + 1.0e-9,
-                    mc.player.getZ(), mc.player.getYRot(), mc.player.getXRot(), true));
+
+            mc.player.fallDistance = 0.0F;
+         } else if (this.modeConfig.getValue() == NoFallModule.NoFallMode.GRIM) {
+            Managers.NETWORK
+               .sendPacket(new PosRot(mc.player.getX(), mc.player.getY() + 1.0E-9, mc.player.getZ(), mc.player.getYRot(), mc.player.getXRot(), true));
             mc.player.resetFallDistance();
-        }
-    }
+         }
+      }
+   }
 
-    @EventListener
-    public void onPacketOutbound(PacketEvent.Outbound event)
-    {
-        if (mc.player == null || !checkFalling())
-        {
-            return;
-        }
-        if (event.getPacket() instanceof ServerboundMovePlayerPacket packet)
-        {
-            if (modeConfig.getValue() == NoFallMode.PACKET)
-            {
-                ((AccessorPlayerMoveC2SPacket) packet).hookSetOnGround(true);
+   @EventListener
+   public void onPacketOutbound(PacketEvent.Outbound event) {
+      if (mc.player != null && this.checkFalling()) {
+         if (event.getPacket() instanceof ServerboundMovePlayerPacket packet) {
+            if (this.modeConfig.getValue() == NoFallModule.NoFallMode.PACKET) {
+               ((AccessorPlayerMoveC2SPacket)packet).hookSetOnGround(true);
+            } else if (this.modeConfig.getValue() == NoFallModule.NoFallMode.ANTI) {
+               double y = packet.getY(mc.player.getY());
+               ((AccessorPlayerMoveC2SPacket)packet).hookSetY(y + 0.1F);
+            } else if (this.modeConfig.getValue() == NoFallModule.NoFallMode.STRICT && this.isFallingLagback() && mc.player.fallDistance >= 3.0F) {
+               Managers.MOVEMENT.setMotionY(0.0);
+               ((AccessorPlayerMoveC2SPacket)packet).hookSetY(this.groundedY);
+               mc.player.fallDistance = 0.0F;
             }
-            else if (modeConfig.getValue() == NoFallMode.ANTI)
-            {
-                double y = packet.getY(mc.player.getY());
-                ((AccessorPlayerMoveC2SPacket) packet).hookSetY(y + 0.10000000149011612);
-            }
-            else if (modeConfig.getValue() == NoFallMode.STRICT)
-            {
-                if (isFallingLagback() && mc.player.fallDistance >= 3.0f)
-                {
-                    Managers.MOVEMENT.setMotionY(0.0);
-                    ((AccessorPlayerMoveC2SPacket) packet).hookSetY(groundedY);
-                    mc.player.fallDistance = 0.0f;
-                }
-            }
-        }
-    }
+         }
+      }
+   }
 
-    public double getGroundY()
-    {
-        for (int i = (int) Math.round(mc.player.getY()); i > 0; --i)
-        {
-            AABB bb = mc.player.getBoundingBox();
-            AABB box = new AABB(bb.minX, i - 1.0, bb.minZ, bb.maxX, i, bb.maxZ);
-            if (!mc.level.noCollision(box) || box.minY > mc.player.getY())
-            {
-                continue;
-            }
+   public double getGroundY() {
+      for (int i = (int)Math.round(mc.player.getY()); i > 0; i--) {
+         AABB bb = mc.player.getBoundingBox();
+         AABB box = new AABB(bb.minX, i - 1.0, bb.minZ, bb.maxX, i, bb.maxZ);
+         if (mc.level.noCollision(box) && !(box.minY > mc.player.getY())) {
             return i;
-        }
-        return 0.0;
-    }
+         }
+      }
 
-    public boolean isFallingLagback()
-    {
-        groundedY = getGroundY() - 0.1;
-        return mc.player.getY() - groundedY < 3.0;
-    }
+      return 0.0;
+   }
 
-    private boolean checkFalling()
-    {
-        return mc.player.fallDistance > mc.player.getMaxFallDistance() && !mc.player.onGround()
-                && !mc.player.isFallFlying() && !FlightModule.getInstance().isEnabled() && !PacketFlyModule.getInstance().isEnabled();
-    }
+   public boolean isFallingLagback() {
+      this.groundedY = this.getGroundY() - 0.1;
+      return mc.player.getY() - this.groundedY < 3.0;
+   }
 
-    public enum NoFallMode
-    {
-        ANTI,
-        LIMIT,
-        PACKET,
-        STRICT,
-        GRIM
-    }
+   private boolean checkFalling() {
+      return mc.player.fallDistance > mc.player.getMaxFallDistance()
+         && !mc.player.onGround()
+         && !mc.player.isFallFlying()
+         && !FlightModule.getInstance().isEnabled()
+         && !PacketFlyModule.getInstance().isEnabled();
+   }
+
+   public static enum NoFallMode {
+      ANTI,
+      LIMIT,
+      PACKET,
+      STRICT,
+      GRIM;
+   }
 }

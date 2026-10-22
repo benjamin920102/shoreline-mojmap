@@ -20,80 +20,64 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(ParticleEngine.class)
-public class MixinParticleManager
-{
-    @Shadow
-    @Final
-    private Object2IntOpenHashMap<ParticleGroup> trackedParticleCounts;
+@Mixin({ParticleEngine.class})
+public class MixinParticleManager {
+   @Shadow
+   @Final
+   private Object2IntOpenHashMap<ParticleGroup> trackedParticleCounts;
 
-    /**
-     * @param parameters
-     * @param x
-     * @param y
-     * @param z
-     * @param velocityX
-     * @param velocityY
-     * @param velocityZ
-     * @param cir
-     */
-    @Inject(method = "createParticle(Lnet/minecraft/core/particles/ParticleOptions;DDDDDD)Lnet/minecraft/client/particle/Particle;", at = @At(value =
-            "HEAD"), cancellable = true)
-    private void hookAddParticle(ParticleOptions parameters, double x,
-                                 double y, double z, double velocityX,
-                                 double velocityY, double velocityZ,
-                                 CallbackInfoReturnable<Particle> cir)
-    {
-        ParticleEvent particleEvent = new ParticleEvent(parameters);
-        EventBus.INSTANCE.dispatch(particleEvent);
-        if (particleEvent.isCanceled())
-        {
-            cir.setReturnValue(null);
-            cir.cancel();
-        }
-    }
+   @Inject(
+      method = {"createParticle(Lnet/minecraft/core/particles/ParticleOptions;DDDDDD)Lnet/minecraft/client/particle/Particle;"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookAddParticle(
+      ParticleOptions parameters, double x, double y, double z, double velocityX, double velocityY, double velocityZ, CallbackInfoReturnable<Particle> cir
+   ) {
+      ParticleEvent particleEvent = new ParticleEvent(parameters);
+      EventBus.INSTANCE.dispatch(particleEvent);
+      if (particleEvent.isCanceled()) {
+         cir.setReturnValue(null);
+         cir.cancel();
+      }
+   }
 
-    /**
-     * @param entity
-     * @param parameters
-     * @param maxAge
-     * @param ci
-     */
-    @Inject(method = "createTrackingEmitter(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/core/particles/ParticleOptions;I)V", at = @At(value = "HEAD"), cancellable = true)
-    private void hookAddEmitter(Entity entity, ParticleOptions parameters, int maxAge, CallbackInfo ci)
-    {
-        ParticleEvent.Emitter particleEvent =
-                new ParticleEvent.Emitter(parameters);
-        EventBus.INSTANCE.dispatch(particleEvent);
-        if (particleEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+   @Inject(
+      method = {"createTrackingEmitter(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/core/particles/ParticleOptions;I)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookAddEmitter(Entity entity, ParticleOptions parameters, int maxAge, CallbackInfo ci) {
+      ParticleEvent.Emitter particleEvent = new ParticleEvent.Emitter(parameters);
+      EventBus.INSTANCE.dispatch(particleEvent);
+      if (particleEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 
-    @Inject(method = "destroy", at = @At("HEAD"), cancellable = true)
-    private void onAddBlockBreakParticles(BlockPos pos, BlockState state, CallbackInfo ci)
-    {
-        BlockBreakParticleEvent blockBreakParticleEvent = new BlockBreakParticleEvent();
-        EventBus.INSTANCE.dispatch(blockBreakParticleEvent);
-        if (blockBreakParticleEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+   @Inject(
+      method = {"destroy(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void onAddBlockBreakParticles(BlockPos pos, BlockState state, CallbackInfo ci) {
+      BlockBreakParticleEvent blockBreakParticleEvent = new BlockBreakParticleEvent();
+      EventBus.INSTANCE.dispatch(blockBreakParticleEvent);
+      if (blockBreakParticleEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 
-    @Inject(method = "crack", at = @At("HEAD"), cancellable = true)
-    private void onAddBlockBreakingParticles(BlockPos pos, Direction direction, CallbackInfo ci)
-    {
-        BlockBreakParticleEvent blockBreakParticleEvent = new BlockBreakParticleEvent();
-        EventBus.INSTANCE.dispatch(blockBreakParticleEvent);
-        if (blockBreakParticleEvent.isCanceled())
-        {
-            ci.cancel();
-        }
-    }
+   @Inject(
+      method = {"crack(Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void onAddBlockBreakingParticles(BlockPos pos, Direction direction, CallbackInfo ci) {
+      BlockBreakParticleEvent blockBreakParticleEvent = new BlockBreakParticleEvent();
+      EventBus.INSTANCE.dispatch(blockBreakParticleEvent);
+      if (blockBreakParticleEvent.isCanceled()) {
+         ci.cancel();
+      }
+   }
 }

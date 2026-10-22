@@ -4,36 +4,27 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
-/**
- * @author linus
- * @since 1.0
- */
 @Cancelable
-public class ChatRenderEvent extends Event
-{
-    //
-    private final GuiGraphics context;
-    private final float x, y;
+public class ChatRenderEvent extends Event {
+   private final GuiGraphics context;
+   private final float x;
+   private final float y;
 
-    public ChatRenderEvent(GuiGraphics context, float x, float y)
-    {
-        this.context = context;
-        this.x = x;
-        this.y = y;
-    }
+   public ChatRenderEvent(GuiGraphics context, float x, float y) {
+      this.context = context;
+      this.x = x;
+      this.y = y;
+   }
 
-    public GuiGraphics getContext()
-    {
-        return context;
-    }
+   public GuiGraphics getContext() {
+      return this.context;
+   }
 
-    public float getX()
-    {
-        return x;
-    }
+   public float getX() {
+      return this.x;
+   }
 
-    public float getY()
-    {
-        return y;
-    }
+   public float getY() {
+      return this.y;
+   }
 }

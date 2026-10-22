@@ -2,60 +2,39 @@ package net.shoreline.client.api.config.setting;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.util.function.Supplier;
 import net.shoreline.client.api.config.Config;
 
-import java.util.function.Supplier;
+public class BooleanConfig extends Config<Boolean> {
+   public BooleanConfig(String name, String desc, Boolean val) {
+      super(name, desc, val);
+   }
 
-/**
- * @author linus
- * @since 1.0
- */
-public class BooleanConfig extends Config<Boolean>
-{
-    public BooleanConfig(String name, String desc, Boolean val)
-    {
-        super(name, desc, val);
-    }
+   public BooleanConfig(String name, String desc, Boolean val, Supplier<Boolean> visible) {
+      super(name, desc, val, visible);
+      this.configAnimation.setState(val);
+   }
 
-    public BooleanConfig(String name, String desc, Boolean val,
-                         Supplier<Boolean> visible)
-    {
-        super(name, desc, val, visible);
-        configAnimation.setState(val);
-    }
+   public void setValue(Boolean in) {
+      super.setValue(in);
+      if (in != this.configAnimation.getState()) {
+         this.configAnimation.setState(in);
+      }
+   }
 
-    @Override
-    public void setValue(Boolean in)
-    {
-        super.setValue(in);
-        if (in != configAnimation.getState())
-        {
-            configAnimation.setState(in);
-        }
-    }
+   @Override
+   public JsonObject toJson() {
+      JsonObject configObj = super.toJson();
+      configObj.addProperty("value", this.getValue());
+      return configObj;
+   }
 
-    /**
-     * @return
-     */
-    @Override
-    public JsonObject toJson()
-    {
-        JsonObject configObj = super.toJson();
-        configObj.addProperty("value", getValue());
-        return configObj;
-    }
-
-    /**
-     * @param jsonObj The data as a json object
-     */
-    @Override
-    public Boolean fromJson(JsonObject jsonObj)
-    {
-        if (jsonObj.has("value"))
-        {
-            JsonElement element = jsonObj.get("value");
-            return element.getAsBoolean();
-        }
-        return null;
-    }
+   public Boolean fromJson(JsonObject jsonObj) {
+      if (jsonObj.has("value")) {
+         JsonElement element = jsonObj.get("value");
+         return element.getAsBoolean();
+      } else {
+         return null;
+      }
+   }
 }

@@ -11,51 +11,25 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
-/**
- * @author linus
- * @see ServerboundInteractPacket
- * @since 1.0
- */
-@Mixin(ServerboundInteractPacket.class)
-public abstract class MixinPlayerInteractEntityC2SPacket implements IPlayerInteractEntityC2SPacket, Globals
-{
-    // Mojang mane wtf ..
-    //
-    @Shadow
-    @Final
-    private int entityId;
+@Mixin({ServerboundInteractPacket.class})
+public abstract class MixinPlayerInteractEntityC2SPacket implements IPlayerInteractEntityC2SPacket, Globals {
+   @Shadow
+   @Final
+   private int entityId;
 
-    //
-    @Shadow
-    public abstract void write(FriendlyByteBuf buf);
+   @Shadow
+   public abstract void write(FriendlyByteBuf var1);
 
-    /**
-     * @return
-     */
-    @Override
-    public Entity getEntity()
-    {
-        if (mc.level == null)
-        {
-            return null;
-        }
-        return mc.level.getEntity(entityId);
-    }
+   @Override
+   public Entity getEntity() {
+      return mc.level == null ? null : mc.level.getEntity(this.entityId);
+   }
 
-    /**
-     * Scuffed fix for IllegalAccessError net.minecraft.class_2824$class_5907?
-     *
-     * @return
-     * @see <a href="https://github.com/BleachDev/BleachHack/blob/1.19.4/src/main/java/org/bleachhack/util/PlayerInteractEntityC2SUtils.java#L19">Bleachdev</a>
-     */
-    @Override
-    public InteractType getType()
-    {
-        FriendlyByteBuf packetBuf = new FriendlyByteBuf(Unpooled.buffer());
-        write(packetBuf);
-        packetBuf.readVarInt();
-        return packetBuf.readEnum(InteractType.class);
-    }
+   @Override
+   public InteractType getType() {
+      FriendlyByteBuf packetBuf = new FriendlyByteBuf(Unpooled.buffer());
+      this.write(packetBuf);
+      packetBuf.readVarInt();
+      return packetBuf.readEnum(InteractType.class);
+   }
 }
-
-

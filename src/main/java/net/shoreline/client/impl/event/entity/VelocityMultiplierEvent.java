@@ -5,29 +5,15 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
-/**
- * @author linus
- * @since 1.0
- */
 @Cancelable
-public class VelocityMultiplierEvent extends Event
-{
-    //
-    private final BlockState state;
+public class VelocityMultiplierEvent extends Event {
+   private final BlockState state;
 
-    /**
-     * @param state
-     */
-    public VelocityMultiplierEvent(BlockState state)
-    {
-        this.state = state;
-    }
+   public VelocityMultiplierEvent(BlockState state) {
+      this.state = state;
+   }
 
-    /**
-     * @return
-     */
-    public Block getBlock()
-    {
-        return state.getBlock();
-    }
+   public Block getBlock() {
+      return this.state.getBlock();
+   }
 }

@@ -1,6 +1,20 @@
 package net.shoreline.client.impl.module.combat;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.ChestMenu;
@@ -21,210 +35,150 @@ import net.shoreline.client.util.math.timer.Timer;
 import net.shoreline.eventbus.annotation.EventListener;
 import net.shoreline.eventbus.event.StageEvent;
 
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayDeque;
-import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
+public class AutoRegearModule extends ToggleModule {
+   private static AutoRegearModule INSTANCE;
+   Config<Float> delayConfig = this.register(new NumberConfig<>("Delay", "The item swap delay", 0.0F, 0.15F, 2.0F));
+   private final Timer clickTimer = new CacheTimer();
+   private final Map<Integer, Item> regearInventory = new ConcurrentHashMap<>();
 
-public class AutoRegearModule extends ToggleModule
-{
-    private static AutoRegearModule INSTANCE;
+   public AutoRegearModule() {
+      super("AutoRegear", "Automatically refills your inventory with gear", ModuleCategory.COMBAT);
+      INSTANCE = this;
+   }
 
-    Config<Float> delayConfig = register(new NumberConfig<>("Delay", "The item swap delay", 0.0f, 0.15f, 2.0f));
+   public static AutoRegearModule getInstance() {
+      return INSTANCE;
+   }
 
-    private final Timer clickTimer = new CacheTimer();
-    private final Map<Integer, Item> regearInventory = new ConcurrentHashMap<>();
+   @Override
+   public void onEnable() {
+      if (this.regearInventory.isEmpty()) {
+         this.sendModuleError("No regear configuration set! Use the .regear command to set your regear inventory.");
+      }
+   }
 
-    public AutoRegearModule()
-    {
-        super("AutoRegear", "Automatically refills your inventory with gear", ModuleCategory.COMBAT);
-        INSTANCE = this;
-    }
+   @EventListener
+   public void onTick(TickEvent event) {
+      if (event.getStage() == StageEvent.EventStage.PRE) {
+         if (mc.player.containerMenu instanceof ChestMenu containerScreen) {
+            for (Entry<Integer, Item> entry : this.regearInventory.entrySet()) {
+               if (entry.getValue() != Items.AIR) {
+                  int slotId = containerScreen.getContainer().getContainerSize() + entry.getKey() - 9;
+                  ItemStack playerStack = mc.player.getInventory().getItem(slotId);
+                  if (playerStack.getCount() < playerStack.getMaxStackSize()) {
+                     Queue<Integer> validSlots = new ArrayDeque<>();
 
-    public static AutoRegearModule getInstance()
-    {
-        return INSTANCE;
-    }
+                     for (int i = 0; i < containerScreen.getContainer().getContainerSize(); i++) {
+                        Slot slot = containerScreen.getSlot(i);
+                        if (slot.hasItem() && slot.getItem().getItem() == entry.getValue()) {
+                           validSlots.add(i);
+                        }
+                     }
 
-    @Override
-    public void onEnable()
-    {
-        if (regearInventory.isEmpty())
-        {
-            sendModuleError("No regear configuration set! Use the .regear command to set your regear inventory.");
-        }
-    }
-
-    @EventListener
-    public void onTick(TickEvent event)
-    {
-        if (event.getStage() != StageEvent.EventStage.PRE)
-        {
-            return;
-        }
-
-        if (mc.player.containerMenu instanceof ChestMenu containerScreen)
-        {
-            for (Map.Entry<Integer, Item> entry : regearInventory.entrySet())
-            {
-                if (entry.getValue() == Items.AIR)
-                {
-                    continue;
-                }
-
-                int slotId = containerScreen.getContainer().getContainerSize() + entry.getKey() - 9;
-                ItemStack playerStack = mc.player.getInventory().getItem(slotId);
-                if (playerStack.getCount() >= playerStack.getMaxStackSize())
-                {
-                    continue;
-                }
-                final Queue<Integer> validSlots = new ArrayDeque<>();
-
-                // First organize player inventory
-
-                // Then we can take from containers
-                for (int i = 0; i < containerScreen.getContainer().getContainerSize(); i++)
-                {
-                    Slot slot = containerScreen.getSlot(i);
-                    if (slot.hasItem() && slot.getItem().getItem() == entry.getValue())
-                    {
-                        validSlots.add(i);
-                    }
-                }
-                while (!validSlots.isEmpty() && playerStack.getCount() < playerStack.getMaxStackSize())
-                {
-                    if (clickTimer.passed(delayConfig.getValue() * 1000))
-                    {
-                        int swapSlot = validSlots.remove();
-                        Managers.INVENTORY.pickupSlot(swapSlot);
-                        Managers.INVENTORY.pickupSlot(slotId);
-                        clickTimer.reset();
-                    }
-
-                    playerStack = mc.player.getInventory().getItem(slotId);
-                }
+                     for (;
+                        !validSlots.isEmpty() && playerStack.getCount() < playerStack.getMaxStackSize();
+                        playerStack = mc.player.getInventory().getItem(slotId)
+                     ) {
+                        if (this.clickTimer.passed(this.delayConfig.getValue() * 1000.0F)) {
+                           int swapSlot = validSlots.remove();
+                           Managers.INVENTORY.pickupSlot(swapSlot);
+                           Managers.INVENTORY.pickupSlot(slotId);
+                           this.clickTimer.reset();
+                        }
+                     }
+                  }
+               }
             }
-        }
+         }
 
-        if (mc.player.containerMenu instanceof ShulkerBoxMenu shulkerBoxScreenHandler)
-        {
-            for (Map.Entry<Integer, Item> entry : regearInventory.entrySet())
-            {
-                if (entry.getValue() == Items.AIR)
-                {
-                    continue;
-                }
+         if (mc.player.containerMenu instanceof ShulkerBoxMenu shulkerBoxScreenHandler) {
+            for (Entry<Integer, Item> entryx : this.regearInventory.entrySet()) {
+               if (entryx.getValue() != Items.AIR) {
+                  int slotId = shulkerBoxScreenHandler.getItems().size() + entryx.getKey() - 9;
+                  ItemStack playerStack = mc.player.getInventory().getItem(slotId);
+                  if (playerStack.getCount() < playerStack.getMaxStackSize()) {
+                     Queue<Integer> validSlots = new ArrayDeque<>();
 
-                int slotId = shulkerBoxScreenHandler.getItems().size() + entry.getKey() - 9;
-                ItemStack playerStack = mc.player.getInventory().getItem(slotId);
-                if (playerStack.getCount() >= playerStack.getMaxStackSize())
-                {
-                    continue;
-                }
-                final Queue<Integer> validSlots = new ArrayDeque<>();
+                     for (int ix = 0; ix < shulkerBoxScreenHandler.slots.size(); ix++) {
+                        Slot slot = shulkerBoxScreenHandler.slots.get(ix);
+                        if (slot.hasItem() && slot.getItem().getItem() == entryx.getValue()) {
+                           validSlots.add(ix);
+                        }
+                     }
 
-                // First organize player inventory
-
-                // Then we can take from containers
-                for (int i = 0; i < shulkerBoxScreenHandler.slots.size(); i++)
-                {
-                    Slot slot = shulkerBoxScreenHandler.slots.get(i);
-                    if (slot.hasItem() && slot.getItem().getItem() == entry.getValue())
-                    {
-                        validSlots.add(i);
-                    }
-                }
-                while (!validSlots.isEmpty() && playerStack.getCount() < playerStack.getMaxStackSize())
-                {
-                    if (clickTimer.passed(delayConfig.getValue() * 1000))
-                    {
-                        int swapSlot = validSlots.remove();
-                        Managers.INVENTORY.pickupSlot(swapSlot);
-                        Managers.INVENTORY.pickupSlot(slotId);
-                        clickTimer.reset();
-                    }
-
-                    playerStack = mc.player.getInventory().getItem(slotId);
-                }
+                     for (;
+                        !validSlots.isEmpty() && playerStack.getCount() < playerStack.getMaxStackSize();
+                        playerStack = mc.player.getInventory().getItem(slotId)
+                     ) {
+                        if (this.clickTimer.passed(this.delayConfig.getValue() * 1000.0F)) {
+                           int swapSlot = validSlots.remove();
+                           Managers.INVENTORY.pickupSlot(swapSlot);
+                           Managers.INVENTORY.pickupSlot(slotId);
+                           this.clickTimer.reset();
+                        }
+                     }
+                  }
+               }
             }
-        }
-    }
+         }
+      }
+   }
 
-    public void clearPlayerInventory()
-    {
-        regearInventory.clear();
-    }
+   public void clearPlayerInventory() {
+      this.regearInventory.clear();
+   }
 
-    public void savePlayerInventory()
-    {
-        regearInventory.clear();
-        for (int i = 0; i < 35; i++)
-        {
-            ItemStack stack = mc.player.getInventory().getItem(i);
-            regearInventory.put(i < 9 ? i + 36 : i, stack.getItem());
-        }
-    }
+   public void savePlayerInventory() {
+      this.regearInventory.clear();
 
-    public void saveRegearFile()
-    {
-        if (regearInventory.isEmpty())
-        {
-            return;
-        }
-        try
-        {
+      for (int i = 0; i < 35; i++) {
+         ItemStack stack = mc.player.getInventory().getItem(i);
+         this.regearInventory.put(i < 9 ? i + 36 : i, stack.getItem());
+      }
+   }
+
+   public void saveRegearFile() {
+      if (!this.regearInventory.isEmpty()) {
+         try {
             Path regearFile = Shoreline.CONFIG.getClientDirectory().resolve("regear.json");
-            if (!Files.exists(regearFile))
-            {
-                Files.createFile(regearFile);
+            if (!Files.exists(regearFile)) {
+               Files.createFile(regearFile);
             }
+
             FileWriter writer = new FileWriter(regearFile.toFile());
             JsonArray jsonArray = new JsonArray();
-            for (Map.Entry<Integer, Item> entry : regearInventory.entrySet())
-            {
-                JsonObject jsonObject1 = new JsonObject();
-                jsonObject1.addProperty("slotId", entry.getKey());
-                jsonObject1.addProperty("item", BuiltInRegistries.ITEM.getKey(entry.getValue()).toString());
-                jsonArray.add(jsonObject1);
+
+            for (Entry<Integer, Item> entry : this.regearInventory.entrySet()) {
+               JsonObject jsonObject1 = new JsonObject();
+               jsonObject1.addProperty("slotId", entry.getKey());
+               jsonObject1.addProperty("item", BuiltInRegistries.ITEM.getKey(entry.getValue()).toString());
+               jsonArray.add(jsonObject1);
             }
+
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
             gson.toJson(jsonArray, writer);
-        }
-        catch (IOException exception)
-        {
+         } catch (IOException var7) {
+         }
+      }
+   }
 
-        }
-    }
-
-    public void loadRegearFile()
-    {
-        Path regearFile = Shoreline.CONFIG.getClientDirectory().resolve("regear.json");
-        if (!Files.exists(regearFile))
-        {
-            return;
-        }
-        try
-        {
-            regearInventory.clear();
+   public void loadRegearFile() {
+      Path regearFile = Shoreline.CONFIG.getClientDirectory().resolve("regear.json");
+      if (Files.exists(regearFile)) {
+         try {
+            this.regearInventory.clear();
             FileReader reader = new FileReader(regearFile.toFile());
             Gson gson = new Gson();
-            JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
-            for (JsonElement jsonElement : jsonArray)
-            {
-                JsonObject jsonObject = jsonElement.getAsJsonObject();
-                int slotId = jsonObject.get("slotId").getAsInt();
-                Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(jsonObject.get("item").getAsString()));
-                regearInventory.put(slotId, item);
+
+            for (JsonElement jsonElement : (JsonArray)gson.fromJson(reader, JsonArray.class)) {
+               JsonObject jsonObject = jsonElement.getAsJsonObject();
+               int slotId = jsonObject.get("slotId").getAsInt();
+               Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(jsonObject.get("item").getAsString()));
+               this.regearInventory.put(slotId, item);
             }
-        }
-        catch (IOException exception)
-        {
-            exception.printStackTrace();
-        }
-    }
+         } catch (IOException var10) {
+            var10.printStackTrace();
+         }
+      }
+   }
 }

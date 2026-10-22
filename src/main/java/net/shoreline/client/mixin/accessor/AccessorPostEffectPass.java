@@ -6,14 +6,13 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(PostPass.class)
-public interface AccessorPostEffectPass
-{
-    @Mutable
-    @Accessor("inTarget")
-    void hookSetInput(RenderTarget framebuffer);
+@Mixin({PostPass.class})
+public interface AccessorPostEffectPass {
+   @Mutable
+   @Accessor("inTarget")
+   void hookSetInput(RenderTarget var1);
 
-    @Mutable
-    @Accessor("outTarget")
-    void hookSetOutput(RenderTarget framebuffer);
+   @Mutable
+   @Accessor("outTarget")
+   void hookSetOutput(RenderTarget var1);
 }

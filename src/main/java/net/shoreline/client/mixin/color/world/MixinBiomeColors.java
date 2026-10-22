@@ -12,22 +12,21 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(BiomeColors.class)
-public class MixinBiomeColors implements Globals
-{
-    @Inject(method = "getAverageColor", at = @At("HEAD"), cancellable = true)
-    private static void hookGetColor(BlockAndTintGetter world, BlockPos pos, ColorResolver resolver, CallbackInfoReturnable<Integer> cir)
-    {
-        if (mc.level == null)
-        {
-            return;
-        }
-        BiomeColorEvent biomeColorEvent = new BiomeColorEvent(resolver);
-        EventBus.INSTANCE.dispatch(biomeColorEvent);
-        if (biomeColorEvent.isCanceled())
-        {
+@Mixin({BiomeColors.class})
+public class MixinBiomeColors implements Globals {
+   @Inject(
+      method = {"getAverageColor(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/ColorResolver;)I"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private static void hookGetColor(BlockAndTintGetter world, BlockPos pos, ColorResolver resolver, CallbackInfoReturnable<Integer> cir) {
+      if (mc.level != null) {
+         BiomeColorEvent biomeColorEvent = new BiomeColorEvent(resolver);
+         EventBus.INSTANCE.dispatch(biomeColorEvent);
+         if (biomeColorEvent.isCanceled()) {
             cir.cancel();
             cir.setReturnValue(biomeColorEvent.getRGB());
-        }
-    }
+         }
+      }
+   }
 }

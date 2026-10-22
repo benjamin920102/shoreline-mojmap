@@ -5,25 +5,13 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.entity.LevitationEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class AntiLevitationModule extends ToggleModule
-{
+public class AntiLevitationModule extends ToggleModule {
+   public AntiLevitationModule() {
+      super("AntiLevitation", "Prevents the player from being levitated", ModuleCategory.MOVEMENT);
+   }
 
-    /**
-     *
-     */
-    public AntiLevitationModule()
-    {
-        super("AntiLevitation", "Prevents the player from being levitated",
-                ModuleCategory.MOVEMENT);
-    }
-
-    @EventListener
-    public void onLevitation(LevitationEvent event)
-    {
-        event.cancel();
-    }
+   @EventListener
+   public void onLevitation(LevitationEvent event) {
+      event.cancel();
+   }
 }

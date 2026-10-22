@@ -1,5 +1,12 @@
 package net.shoreline.client.impl.module.combat;
 
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -38,474 +45,366 @@ import net.shoreline.client.util.render.animation.Animation;
 import net.shoreline.client.util.world.BlastResistantBlocks;
 import net.shoreline.eventbus.annotation.EventListener;
 
-import java.awt.*;
-import java.util.*;
+public final class SelfTrapModule extends ObsidianPlacerModule {
+   private static SelfTrapModule INSTANCE;
+   Config<SelfTrapModule.Timing> timingConfig = this.register(
+      new EnumConfig<>("Timing", "Timing for replacing blocks", SelfTrapModule.Timing.VANILLA, SelfTrapModule.Timing.values())
+   );
+   Config<Boolean> prePlaceExplosionConfig = this.register(
+      new BooleanConfig("PrePlace-Explosions", "Pre places before explosions", false, () -> this.timingConfig.getValue() == SelfTrapModule.Timing.SEQUENTIAL)
+   );
+   Config<Boolean> prePlaceTickConfig = this.register(
+      new BooleanConfig("PrePlaceTick", "Pre places before ticks", false, () -> this.timingConfig.getValue() == SelfTrapModule.Timing.SEQUENTIAL)
+   );
+   Config<Float> placeRangeConfig = this.register(new NumberConfig<>("PlaceRange", "The placement range for trap ", 0.0F, 4.0F, 6.0F));
+   Config<Boolean> rotateConfig = this.register(new BooleanConfig("Rotate", "Rotates to block before placing", false));
+   Config<Boolean> attackConfig = this.register(new BooleanConfig("Attack", "Attacks crystals in the way of trap ", true));
+   Config<Boolean> extendConfig = this.register(new BooleanConfig("Extend", "Extends trap if the player is not in the center of a block", true));
+   Config<Boolean> mineExtendConfig = this.register(new BooleanConfig("MineExtend", "Extends surround if the feet block is being mined", false));
+   Config<Boolean> headExtendConfig = this.register(new BooleanConfig("HeadExtend", "Extends surround if the head block is being mined", false));
+   Config<Boolean> supportConfig = this.register(new BooleanConfig("Support", "Creates a floor for the trap if there is none", false));
+   Config<Boolean> headConfig = this.register(new BooleanConfig("CoverHead", "Place a block at your head", false));
+   Config<Integer> shiftTicksConfig = this.register(new NumberConfig<>("ShiftTicks", "The number of blocks to place per tick", 1, 2, 10));
+   Config<Float> shiftDelayConfig = this.register(new NumberConfig<>("ShiftDelay", "The delay between each block placement interval", 0.0F, 1.0F, 5.0F));
+   Config<Boolean> autoDisableConfig = this.register(new BooleanConfig("AutoDisable", "Disables after placing the blocks", true));
+   Config<Boolean> renderConfig = this.register(new BooleanConfig("Render", "Renders where trap is placing blocks", false));
+   Config<Integer> fadeTimeConfig = this.register(new NumberConfig<>("Fade-Time", "Time to fade", 0, 250, 1000, () -> false));
+   private List<BlockPos> surround = new ArrayList<>();
+   private List<BlockPos> placements = new ArrayList<>();
+   private final Map<BlockPos, Long> packets = new HashMap<>();
+   private final Map<BlockPos, Animation> fadeList = new HashMap<>();
+   private int blocksPlaced;
+   private double prevY;
 
-/**
- * @author Shoreline
- * @since 1.0
- */
-public final class SelfTrapModule extends ObsidianPlacerModule
-{
-    private static SelfTrapModule INSTANCE;
+   public SelfTrapModule() {
+      super("SelfTrap", "Fully surrounds the player with blocks", ModuleCategory.COMBAT, 900);
+      INSTANCE = this;
+   }
 
-    Config<Timing> timingConfig = register(new EnumConfig<>("Timing", "Timing for replacing blocks", Timing.VANILLA, Timing.values()));
-    Config<Boolean> prePlaceExplosionConfig = register(new BooleanConfig("PrePlace-Explosions", "Pre places before explosions", false, () -> timingConfig.getValue() == Timing.SEQUENTIAL));
-    Config<Boolean> prePlaceTickConfig = register(new BooleanConfig("PrePlaceTick", "Pre places before ticks", false, () -> timingConfig.getValue() == Timing.SEQUENTIAL));
-    Config<Float> placeRangeConfig = register(new NumberConfig<>("PlaceRange", "The placement range for trap ", 0.0f, 4.0f, 6.0f));
-    Config<Boolean> rotateConfig = register(new BooleanConfig("Rotate", "Rotates to block before placing", false));
-    Config<Boolean> attackConfig = register(new BooleanConfig("Attack", "Attacks crystals in the way of trap ", true));
-    Config<Boolean> extendConfig = register(new BooleanConfig("Extend", "Extends trap if the player is not in the center of a block", true));
-    Config<Boolean> mineExtendConfig = register(new BooleanConfig("MineExtend", "Extends surround if the feet block is being mined", false));
-    Config<Boolean> headExtendConfig = register(new BooleanConfig("HeadExtend", "Extends surround if the head block is being mined", false));
-    Config<Boolean> supportConfig = register(new BooleanConfig("Support", "Creates a floor for the trap if there is none", false));
-    Config<Boolean> headConfig = register(new BooleanConfig("CoverHead", "Place a block at your head", false));
-    Config<Integer> shiftTicksConfig = register(new NumberConfig<>("ShiftTicks", "The number of blocks to place per tick", 1, 2, 10));
-    Config<Float> shiftDelayConfig = register(new NumberConfig<>("ShiftDelay", "The delay between each block placement interval", 0.0f, 1.0f, 5.0f));
-    Config<Boolean> autoDisableConfig = register(new BooleanConfig("AutoDisable", "Disables after placing the blocks", true));
-    Config<Boolean> renderConfig = register(new BooleanConfig("Render", "Renders where trap is placing blocks", false));
-    Config<Integer> fadeTimeConfig = register(new NumberConfig<>("Fade-Time", "Time to fade", 0, 250, 1000, () -> false));
+   public static SelfTrapModule getInstance() {
+      return INSTANCE;
+   }
 
-    private List<BlockPos> surround = new ArrayList<>();
-    private List<BlockPos> placements = new ArrayList<>();
-    private final Map<BlockPos, Long> packets = new HashMap<>();
-    private final Map<BlockPos, Animation> fadeList = new HashMap<>();
-    private int blocksPlaced;
-    private double prevY;
+   @Override
+   public void onEnable() {
+      if (mc.player != null) {
+         this.prevY = mc.player.getY();
+      }
+   }
 
-    public SelfTrapModule()
-    {
-        super("SelfTrap", "Fully surrounds the player with blocks", ModuleCategory.COMBAT, 900);
-        INSTANCE = this;
-    }
+   @Override
+   public void onDisable() {
+      this.surround.clear();
+      this.placements.clear();
+      this.packets.clear();
+      this.fadeList.clear();
+   }
 
-    public static SelfTrapModule getInstance()
-    {
-        return INSTANCE;
-    }
+   @EventListener
+   public void onPlayerTick(PlayerTickEvent event) {
+      this.blocksPlaced = 0;
+      if (!this.autoDisableConfig.getValue() || !(mc.player.getY() - this.prevY > 0.5) && !(mc.player.fallDistance > 1.5F)) {
+         if (!this.multitaskConfig.getValue() && this.checkMultitask()) {
+            this.surround.clear();
+            this.placements.clear();
+         } else {
+            ObsidianPlacerModule.BlockSlot blockSlot = this.getResistantBlockItem();
+            if (blockSlot != null) {
+               int slot = blockSlot.slot();
+               if (slot == -1) {
+                  this.surround.clear();
+                  this.placements.clear();
+               } else {
+                  BlockPos playerPos = PositionUtil.getRoundedBlockPos(mc.player.getX(), mc.player.getY(), mc.player.getZ());
+                  this.surround = this.getSurround(playerPos, mc.player);
+                  if (!this.surround.isEmpty()) {
+                     if (this.attackConfig.getValue()) {
+                        this.attackBlockingCrystals(this.surround);
+                     }
 
-    @Override
-    public void onEnable()
-    {
-        if (mc.player == null)
-        {
-            return;
-        }
-        prevY = mc.player.getY();
-    }
+                     this.placements = this.getPlacementsFromSurround(this.surround);
+                     if (!this.placements.isEmpty()) {
+                        if (this.supportConfig.getValue()) {
+                           for (BlockPos block : new ArrayList<>(this.placements)) {
+                              if (block.getY() <= playerPos.getY()) {
+                                 Direction direction = Managers.INTERACT.getInteractDirectionInternal(block, this.strictDirectionConfig.getValue());
+                                 if (direction == null) {
+                                    this.placements.add(block.below());
+                                 }
+                              }
+                           }
+                        }
 
-    @Override
-    public void onDisable()
-    {
-        surround.clear();
-        placements.clear();
-        packets.clear();
-        fadeList.clear();
-    }
+                        this.placements.sort(Comparator.comparingInt(Vec3i::getY));
 
-    @EventListener
-    public void onPlayerTick(PlayerTickEvent event)
-    {
-        blocksPlaced = 0;
-        if (autoDisableConfig.getValue() && (mc.player.getY() - prevY > 0.5 || mc.player.fallDistance > 1.5f))
-        {
-            disable();
-            return;
-        }
+                        while (this.blocksPlaced < this.shiftTicksConfig.getValue() && this.blocksPlaced < this.placements.size()) {
+                           BlockPos targetPos = this.placements.get(this.blocksPlaced);
+                           this.placeBlock(targetPos, slot);
+                        }
 
-        if (!multitaskConfig.getValue() && checkMultitask())
-        {
-            surround.clear();
-            placements.clear();
-            return;
-        }
-
-         net.shoreline.client.impl.module.ObsidianPlacerModule.BlockSlot blockSlot = getResistantBlockItem();
-        if (blockSlot == null) {
-            return;
-        }
-        
-        int slot = blockSlot.slot();
-        if (slot == -1)
-        {
-            surround.clear();
-            placements.clear();
-            return;
-        }
-
-        BlockPos playerPos = PositionUtil.getRoundedBlockPos(mc.player.getX(), mc.player.getY(), mc.player.getZ());
-        surround = getSurround(playerPos, mc.player);
-        if (surround.isEmpty())
-        {
-            return;
-        }
-        if (attackConfig.getValue())
-        {
-            attackBlockingCrystals(surround);
-        }
-        placements = getPlacementsFromSurround(surround);
-        if (placements.isEmpty())
-        {
-            return;
-        }
-        if (supportConfig.getValue())
-        {
-            for (BlockPos block : new ArrayList<>(placements))
-            {
-                if (block.getY() > playerPos.getY())
-                {
-                    continue;
-                }
-                Direction direction = Managers.INTERACT.getInteractDirectionInternal(block, strictDirectionConfig.getValue());
-                if (direction == null)
-                {
-                    placements.add(block.below());
-                }
+                        if (this.rotateConfig.getValue()) {
+                           Managers.ROTATION.setRotationSilentSync();
+                        }
+                     }
+                  }
+               }
             }
-        }
-        placements.sort(Comparator.comparingInt(Vec3i::getY));
-        while (blocksPlaced < shiftTicksConfig.getValue())
-        {
-            if (blocksPlaced >= placements.size())
-            {
-                break;
+         }
+      } else {
+         this.disable();
+      }
+   }
+
+   @EventListener
+   public void onPacketInbound(PacketEvent.Inbound event) {
+      if (mc.player != null && mc.level != null) {
+         if (event.getPacket() instanceof ClientboundBundlePacket packet) {
+            for (Packet<?> packet1 : packet.subPackets()) {
+               this.handlePackets(packet1);
             }
-            BlockPos targetPos = placements.get(blocksPlaced);
-            // All rotations for shift ticks must send extra packet
-            // This may not work on all servers
-            placeBlock(targetPos, slot);
-        }
+         } else {
+            this.handlePackets(event.getPacket());
+         }
+      }
+   }
 
-        if (rotateConfig.getValue())
-        {
-            Managers.ROTATION.setRotationSilentSync();
-        }
-    }
+   private void handlePackets(Packet<?> serverPacket) {
+      if (this.timingConfig.getValue() == SelfTrapModule.Timing.SEQUENTIAL) {
+         if (serverPacket instanceof ClientboundBlockUpdatePacket packet) {
+            BlockState blockState = packet.getBlockState();
+            BlockPos targetPos = packet.getPos();
+            if (this.surround.contains(targetPos)) {
+               if (blockState.canBeReplaced() && mc.level.isUnobstructed(DEFAULT_OBSIDIAN_STATE, targetPos, CollisionContext.empty())) {
+                  ObsidianPlacerModule.BlockSlot blockSlot = this.getResistantBlockItem();
+                  if (blockSlot == null) {
+                     return;
+                  }
 
-    @EventListener
-    public void onPacketInbound(PacketEvent.Inbound event)
-    {
-        if (mc.player == null || mc.level == null)
-        {
-            return;
-        }
-        if (event.getPacket() instanceof ClientboundBundlePacket packet)
-        {
-            for (Packet<?> packet1 : packet.subPackets())
-            {
-                handlePackets(packet1);
+                  int slot = blockSlot.slot();
+                  if (slot == -1) {
+                     return;
+                  }
+
+                  this.placeBlock(targetPos, slot);
+               } else if (BlastResistantBlocks.isBlastResistant(blockState)) {
+                  this.packets.remove(targetPos);
+               }
             }
-        }
-        else
-        {
-            handlePackets(event.getPacket());
-        }
-    }
+         }
 
-    private void handlePackets(Packet<?> serverPacket)
-    {
-        if (timingConfig.getValue() != Timing.SEQUENTIAL)
-        {
-            return;
-        }
+         if (this.blocksPlaced <= this.shiftTicksConfig.getValue() * 2) {
+            if (serverPacket instanceof ClientboundExplodePacket packetx && this.prePlaceExplosionConfig.getValue()) {
+               BlockPos pos = BlockPos.containing(packetx.getX(), packetx.getY(), packetx.getZ());
+               if (this.surround.contains(pos)) {
+                  ObsidianPlacerModule.BlockSlot blockSlotx = this.getResistantBlockItem();
+                  if (blockSlotx == null) {
+                     return;
+                  }
 
-        if (serverPacket instanceof ClientboundBlockUpdatePacket packet)
-        {
-            final BlockState blockState = packet.getBlockState();
-            final BlockPos targetPos = packet.getPos();
-            if (surround.contains(targetPos))
-            {
-                if (blockState.canBeReplaced() && mc.level.isUnobstructed(DEFAULT_OBSIDIAN_STATE, targetPos, CollisionContext.empty()))
-                {
-                     net.shoreline.client.impl.module.ObsidianPlacerModule.BlockSlot blockSlot = getResistantBlockItem();
-        if (blockSlot == null) {
-            return;
-        }
-        
-        int slot = blockSlot.slot();
-                    if (slot == -1)
-                    {
+                  int slot = blockSlotx.slot();
+                  if (slot == -1) {
+                     return;
+                  }
+
+                  this.placeBlock(pos, slot);
+               }
+            }
+
+            if (serverPacket instanceof ClientboundAddEntityPacket packetxx
+               && packetxx.getType().equals(EntityType.END_CRYSTAL)
+               && this.prePlaceTickConfig.getValue()) {
+               for (BlockPos pos : this.surround) {
+                  if (pos.equals(BlockPos.containing(packetxx.getX(), packetxx.getY(), packetxx.getZ()))) {
+                     ObsidianPlacerModule.BlockSlot blockSlotxx = this.getResistantBlockItem();
+                     if (blockSlotxx == null) {
                         return;
-                    }
-                    placeBlock(targetPos, slot);
-                }
-                else if (BlastResistantBlocks.isBlastResistant(blockState))
-                {
-                    packets.remove(targetPos);
-                }
+                     }
+
+                     int slot = blockSlotxx.slot();
+                     if (slot == -1) {
+                        return;
+                     }
+
+                     this.placeBlock(pos, slot);
+                     break;
+                  }
+               }
             }
-        }
+         }
+      }
+   }
 
-        if (blocksPlaced > shiftTicksConfig.getValue() * 2) // Give some leniency if we are getting place on
-        {
-            return;
-        }
+   private void placeBlock(BlockPos pos, int slot) {
+      Managers.INTERACT.placeBlock(pos, slot, this.strictDirectionConfig.getValue(), false, true, (state, angles) -> {
+         if (this.rotateConfig.getValue() && state) {
+            Managers.ROTATION.setRotationSilent(angles[0], angles[1]);
+         }
+      });
+      this.packets.put(pos, System.currentTimeMillis());
+      this.blocksPlaced++;
+   }
 
-        if (serverPacket instanceof ClientboundExplodePacket packet && prePlaceExplosionConfig.getValue())
-        {
-            BlockPos pos = BlockPos.containing(packet.getX(), packet.getY(), packet.getZ());
-            if (surround.contains(pos))
-            {
-                 net.shoreline.client.impl.module.ObsidianPlacerModule.BlockSlot blockSlot = getResistantBlockItem();
-        if (blockSlot == null) {
-            return;
-        }
-        
-        int slot = blockSlot.slot();
-                if (slot == -1)
-                {
-                    return;
-                }
-                placeBlock(pos, slot);
-            }
-        }
-
-        if (serverPacket instanceof ClientboundAddEntityPacket packet
-                && packet.getType().equals(EntityType.END_CRYSTAL) && prePlaceTickConfig.getValue())
-        {
-            for (BlockPos pos : surround)
-            {
-                if (!pos.equals(BlockPos.containing(packet.getX(), packet.getY(), packet.getZ())))
-                {
-                    continue;
-                }
-
-                 net.shoreline.client.impl.module.ObsidianPlacerModule.BlockSlot blockSlot = getResistantBlockItem();
-        if (blockSlot == null) {
-            return;
-        }
-        
-        int slot = blockSlot.slot();
-                if (slot == -1)
-                {
-                    return;
-                }
-                placeBlock(pos, slot);
-                break;
-            }
-        }
-    }
-
-    private void placeBlock(BlockPos pos, int slot)
-    {
-        Managers.INTERACT.placeBlock(pos, slot, strictDirectionConfig.getValue(), false, true, (state, angles) ->
-        {
-            if (rotateConfig.getValue() && state)
-            {
-                Managers.ROTATION.setRotationSilent(angles[0], angles[1]);
-            }
-        });
-        packets.put(pos, System.currentTimeMillis());
-        blocksPlaced++;
-    }
-
-    public void attackBlockingCrystals(List<BlockPos> posList)
-    {
-        for (BlockPos pos : posList)
-        {
-            Entity crystalEntity = mc.level.getEntities(null, new AABB(pos)).stream()
-                    .filter(e -> e instanceof EndCrystal).findFirst().orElse(null);
-            if (crystalEntity == null)
-            {
-                continue;
-            }
+   public void attackBlockingCrystals(List<BlockPos> posList) {
+      for (BlockPos pos : posList) {
+         Entity crystalEntity = mc.level.getEntities(null, new AABB(pos)).stream().filter(e -> e instanceof EndCrystal).findFirst().orElse(null);
+         if (crystalEntity != null) {
             Managers.NETWORK.sendPacket(ServerboundInteractPacket.createAttackPacket(crystalEntity, mc.player.isShiftKeyDown()));
             Managers.NETWORK.sendPacket(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
             return;
-        }
-    }
+         }
+      }
+   }
 
-    public List<BlockPos> getPlacementsFromSurround(List<BlockPos> surround)
-    {
-        List<BlockPos> placements = new ArrayList<>();
-        for (BlockPos surroundPos : surround)
-        {
-            Long placed = packets.get(surroundPos);
-            if (shiftDelayConfig.getValue() > 0.0f && placed != null && System.currentTimeMillis() - placed < shiftDelayConfig.getValue() * 50.0f)
-            {
-                continue;
-            }
-            if (!mc.level.getBlockState(surroundPos).canBeReplaced())
-            {
-                continue;
-            }
+   public List<BlockPos> getPlacementsFromSurround(List<BlockPos> surround) {
+      List<BlockPos> placements = new ArrayList<>();
+
+      for (BlockPos surroundPos : surround) {
+         Long placed = this.packets.get(surroundPos);
+         if ((
+               !(this.shiftDelayConfig.getValue() > 0.0F)
+                  || placed == null
+                  || !((float)(System.currentTimeMillis() - placed) < this.shiftDelayConfig.getValue() * 50.0F)
+            )
+            && mc.level.getBlockState(surroundPos).canBeReplaced()) {
             double dist = mc.player.distanceToSqr(surroundPos.getCenter());
-            if (dist > ((NumberConfig) placeRangeConfig).getValueSq())
-            {
-                continue;
+            if (!(dist > ((NumberConfig)this.placeRangeConfig).getValueSq())
+               && mc.level.isUnobstructed(DEFAULT_OBSIDIAN_STATE, surroundPos, CollisionContext.empty())) {
+               placements.add(surroundPos);
             }
-            if (mc.level.isUnobstructed(DEFAULT_OBSIDIAN_STATE, surroundPos, CollisionContext.empty()))
-            {
-                placements.add(surroundPos);
-            }
-        }
-        return placements;
-    }
+         }
+      }
 
-    public List<BlockPos> getSurround(BlockPos playerPos, Player player)
-    {
-        List<BlockPos> surroundBlocks = new ArrayList<>();
-        List<BlockPos> playerBlocks = getPlayerBlocks(playerPos, player);
-        for (BlockPos pos : playerBlocks)
-        {
-            for (Direction dir : Direction.values())
-            {
-                if (!dir.getAxis().isHorizontal())
-                {
-                    continue;
-                }
-                BlockPos pos1 = pos.relative(dir);
-                if (surroundBlocks.contains(pos1) || playerBlocks.contains(pos1))
-                {
-                    continue;
-                }
-                surroundBlocks.add(pos1);
-                surroundBlocks.add(pos1.above());
+      return placements;
+   }
+
+   public List<BlockPos> getSurround(BlockPos playerPos, Player player) {
+      List<BlockPos> surroundBlocks = new ArrayList<>();
+      List<BlockPos> playerBlocks = this.getPlayerBlocks(playerPos, player);
+
+      for (BlockPos pos : playerBlocks) {
+         for (Direction dir : Direction.values()) {
+            if (dir.getAxis().isHorizontal()) {
+               BlockPos pos1 = pos.relative(dir);
+               if (!surroundBlocks.contains(pos1) && !playerBlocks.contains(pos1)) {
+                  surroundBlocks.add(pos1);
+                  surroundBlocks.add(pos1.above());
+               }
             }
-        }
-        if (headConfig.getValue())
-        {
-            boolean support = false;
-            final List<BlockPos> headBlocks = new ArrayList<>();
-            for (BlockPos pos : playerBlocks)
-            {
-                BlockPos headPos = pos.relative(Direction.UP, 2);
-                if (!mc.level.getBlockState(headPos).canBeReplaced())
-                {
-                    support = true;
-                }
-                headBlocks.add(headPos);
+         }
+      }
+
+      if (this.headConfig.getValue()) {
+         boolean support = false;
+         List<BlockPos> headBlocks = new ArrayList<>();
+
+         for (BlockPos pos : playerBlocks) {
+            BlockPos headPos = pos.relative(Direction.UP, 2);
+            if (!mc.level.getBlockState(headPos).canBeReplaced()) {
+               support = true;
             }
-            if (!AirPlaceModule.getInstance().isEnabled())
-            {
-                BlockPos supportingPos = null;
-                double min = Double.MAX_VALUE;
-                for (BlockPos pos : surroundBlocks)
-                {
-                    BlockPos pos1 = pos.relative(Direction.UP, 2);
-                    if (!mc.level.getBlockState(pos1).canBeReplaced())
-                    {
-                        support = true;
-                        break;
-                    }
-                    double dist = mc.player.distanceToSqr(pos1.getCenter());
-                    if (dist < min)
-                    {
-                        supportingPos = pos1;
-                        min = dist;
-                    }
-                }
-                if (supportingPos != null && !support)
-                {
-                    surroundBlocks.add(supportingPos);
-                }
+
+            headBlocks.add(headPos);
+         }
+
+         if (!AirPlaceModule.getInstance().isEnabled()) {
+            BlockPos supportingPos = null;
+            double min = Double.MAX_VALUE;
+
+            for (BlockPos pos : surroundBlocks) {
+               BlockPos pos1 = pos.relative(Direction.UP, 2);
+               if (!mc.level.getBlockState(pos1).canBeReplaced()) {
+                  support = true;
+                  break;
+               }
+
+               double dist = mc.player.distanceToSqr(pos1.getCenter());
+               if (dist < min) {
+                  supportingPos = pos1;
+                  min = dist;
+               }
             }
-            surroundBlocks.addAll(headBlocks);
-        }
-        for (BlockPos pos2 : playerBlocks)
-        {
-            if (pos2.equals(playerPos))
-            {
-                continue;
+
+            if (supportingPos != null && !support) {
+               surroundBlocks.add(supportingPos);
             }
+         }
+
+         surroundBlocks.addAll(headBlocks);
+      }
+
+      for (BlockPos pos2 : playerBlocks) {
+         if (!pos2.equals(playerPos)) {
             surroundBlocks.add(pos2.below());
-        }
-        if (mineExtendConfig.getValue())
-        {
-            for (BlockPos surroundPos : new ArrayList<>(surroundBlocks))
-            {
-                boolean secondLayer = surroundPos.getY() != playerPos.getY();
-                if (!headExtendConfig.getValue() && secondLayer)
-                {
-                    continue;
-                }
-                if (!Managers.BLOCK.isPassed(surroundPos, 0.7f))
-                {
-                    continue;
-                }
+         }
+      }
 
-                if (secondLayer && Managers.INTERACT.getInteractDirectionInternal(surroundPos,
-                        strictDirectionConfig.getValue()) == null)
-                {
-                    continue;
-                }
-
-                for (Direction direction : Direction.values())
-                {
-                    if (direction == Direction.DOWN || direction == Direction.UP && secondLayer)
-                    {
-                        continue;
-                    }
-                    BlockPos blockerPos = surroundPos.relative(direction);
-                    if (playerBlocks.contains(blockerPos)
-                            || AutoMineModule.getInstance().getMiningBlock() == blockerPos) // Dont want to help our opponent surround
-                    {
-                        continue;
-                    }
-                    surroundBlocks.add(blockerPos);
-                }
+      if (this.mineExtendConfig.getValue()) {
+         for (BlockPos surroundPos : new ArrayList<>(surroundBlocks)) {
+            boolean secondLayer = surroundPos.getY() != playerPos.getY();
+            if ((this.headExtendConfig.getValue() || !secondLayer)
+               && Managers.BLOCK.isPassed(surroundPos, 0.7F)
+               && (!secondLayer || Managers.INTERACT.getInteractDirectionInternal(surroundPos, this.strictDirectionConfig.getValue()) != null)) {
+               for (Direction direction : Direction.values()) {
+                  if (direction != Direction.DOWN && (direction != Direction.UP || !secondLayer)) {
+                     BlockPos blockerPos = surroundPos.relative(direction);
+                     if (!playerBlocks.contains(blockerPos) && AutoMineModule.getInstance().getMiningBlock() != blockerPos) {
+                        surroundBlocks.add(blockerPos);
+                     }
+                  }
+               }
             }
-        }
-        return surroundBlocks;
-    }
+         }
+      }
 
-    public List<BlockPos> getPlayerBlocks(BlockPos playerPos, Player entity)
-    {
-        final List<BlockPos> playerBlocks = new ArrayList<>();
-        if (extendConfig.getValue())
-        {
-            playerBlocks.addAll(PositionUtil.getAllInBox(entity.getBoundingBox(), playerPos));
-        }
-        else
-        {
-            playerBlocks.add(playerPos);
-        }
-        return playerBlocks;
-    }
+      return surroundBlocks;
+   }
 
-    @EventListener
-    public void onRenderWorld(RenderWorldEvent event)
-    {
-        if (renderConfig.getValue())
-        {
-            RenderBuffers.preRender();
-            for (Map.Entry<BlockPos, Animation> set : fadeList.entrySet())
-            {
-                set.getValue().setState(false);
-                int boxAlpha = (int) (40 * set.getValue().getFactor());
-                int lineAlpha = (int) (100 * set.getValue().getFactor());
-                Color boxColor = ColorsModule.getInstance().getColor(boxAlpha);
-                Color lineColor = ColorsModule.getInstance().getColor(lineAlpha);
-                RenderManager.renderBox(event.getMatrices(), set.getKey(), boxColor.getRGB());
-                RenderManager.renderBoundingBox(event.getMatrices(), set.getKey(), 1.5f, lineColor.getRGB());
-            }
+   public List<BlockPos> getPlayerBlocks(BlockPos playerPos, Player entity) {
+      List<BlockPos> playerBlocks = new ArrayList<>();
+      if (this.extendConfig.getValue()) {
+         playerBlocks.addAll(PositionUtil.getAllInBox(entity.getBoundingBox(), playerPos));
+      } else {
+         playerBlocks.add(playerPos);
+      }
 
-            RenderBuffers.postRender();
+      return playerBlocks;
+   }
 
-            if (placements.isEmpty())
-            {
-                return;
-            }
+   @EventListener
+   public void onRenderWorld(RenderWorldEvent event) {
+      if (this.renderConfig.getValue()) {
+         RenderBuffers.preRender();
 
-            for (BlockPos pos : placements)
-            {
-                Animation animation = new Animation(true, fadeTimeConfig.getValue());
-                fadeList.put(pos, animation);
-            }
-        }
+         for (Entry<BlockPos, Animation> set : this.fadeList.entrySet()) {
+            set.getValue().setState(false);
+            int boxAlpha = (int)(40.0 * set.getValue().getFactor());
+            int lineAlpha = (int)(100.0 * set.getValue().getFactor());
+            Color boxColor = ColorsModule.getInstance().getColor(boxAlpha);
+            Color lineColor = ColorsModule.getInstance().getColor(lineAlpha);
+            RenderManager.renderBox(event.getMatrices(), set.getKey(), boxColor.getRGB());
+            RenderManager.renderBoundingBox(event.getMatrices(), set.getKey(), 1.5F, lineColor.getRGB());
+         }
 
-        fadeList.entrySet().removeIf(e ->
-                e.getValue().getFactor() == 0.0);
-    }
+         RenderBuffers.postRender();
+         if (this.placements.isEmpty()) {
+            return;
+         }
 
-    public boolean isPlacing()
-    {
-        return !placements.isEmpty();
-    }
+         for (BlockPos pos : this.placements) {
+            Animation animation = new Animation(true, this.fadeTimeConfig.getValue().intValue());
+            this.fadeList.put(pos, animation);
+         }
+      }
 
-    public enum Timing
-    {
-        VANILLA,
-        SEQUENTIAL
-    }
+      this.fadeList.entrySet().removeIf(e -> e.getValue().getFactor() == 0.0);
+   }
+
+   public boolean isPlacing() {
+      return !this.placements.isEmpty();
+   }
+
+   public static enum Timing {
+      VANILLA,
+      SEQUENTIAL;
+   }
 }

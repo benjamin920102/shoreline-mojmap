@@ -3,17 +3,14 @@ package net.shoreline.client.impl.event.world;
 import net.minecraft.world.entity.Entity;
 import net.shoreline.eventbus.event.Event;
 
-public class AddEntityEvent extends Event
-{
-    private final Entity entity;
+public class AddEntityEvent extends Event {
+   private final Entity entity;
 
-    public AddEntityEvent(Entity entity)
-    {
-        this.entity = entity;
-    }
+   public AddEntityEvent(Entity entity) {
+      this.entity = entity;
+   }
 
-    public Entity getEntity()
-    {
-        return entity;
-    }
+   public Entity getEntity() {
+      return this.entity;
+   }
 }

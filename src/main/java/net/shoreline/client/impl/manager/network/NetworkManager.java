@@ -1,12 +1,13 @@
 package net.shoreline.client.impl.manager.network;
 
+import java.util.HashSet;
+import java.util.Set;
 import net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
 import net.minecraft.client.multiplayer.prediction.PredictiveAction;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
-import net.minecraft.client.network.*;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerGamePacketListener;
 import net.shoreline.client.impl.event.gui.screen.ConnectScreenEvent;
@@ -19,195 +20,122 @@ import net.shoreline.client.util.math.PerSecondCounter;
 import net.shoreline.eventbus.EventBus;
 import net.shoreline.eventbus.annotation.EventListener;
 
-import java.util.HashSet;
-import java.util.Set;
+public class NetworkManager implements Globals {
+   private static final Set<Packet<?>> PACKET_CACHE = new HashSet<>();
+   private ServerAddress address;
+   private ServerData info;
+   private final PerSecondCounter outgoingCounter = new PerSecondCounter();
+   private final PerSecondCounter incomingCounter = new PerSecondCounter();
 
-/**
- * @author linus
- * @since 1.0
- */
-public class NetworkManager implements Globals
-{
-    private static final Set<Packet<?>> PACKET_CACHE = new HashSet<>();
+   public NetworkManager() {
+      EventBus.INSTANCE.subscribe(this);
+   }
 
-    private ServerAddress address;
-    private ServerData info;
+   @EventListener
+   public void onConnect(ConnectScreenEvent event) {
+      this.address = event.getAddress();
+      this.info = event.getInfo();
+   }
 
-    private final PerSecondCounter outgoingCounter = new PerSecondCounter();
-    private final PerSecondCounter incomingCounter = new PerSecondCounter();
+   @EventListener
+   public void onDisconnect(DisconnectEvent event) {
+      PACKET_CACHE.clear();
+   }
 
-    public NetworkManager()
-    {
-        EventBus.INSTANCE.subscribe(this);
-    }
+   @EventListener
+   public void onPacketOutbound(PacketEvent.Outbound event) {
+      this.outgoingCounter.updateCounter();
+   }
 
-    @EventListener
-    public void onConnect(ConnectScreenEvent event)
-    {
-        address = event.getAddress();
-        info = event.getInfo();
-    }
+   @EventListener
+   public void onPacketOutbound(PacketEvent.Inbound event) {
+      this.incomingCounter.updateCounter();
+   }
 
-    @EventListener
-    public void onDisconnect(DisconnectEvent event)
-    {
-        PACKET_CACHE.clear();
-    }
+   public void connect(ServerAddress address, ServerData info) {
+      if (mc.getConnection() != null) {
+         mc.getConnection()
+            .getConnection()
+            .initiateServerboundPlayConnection(
+               address.getHost(),
+               address.getPort(),
+               new ClientHandshakePacketListenerImpl(mc.getConnection().getConnection(), mc, info, null, false, null, null, null)
+            );
+      }
+   }
 
-    @EventListener
-    public void onPacketOutbound(PacketEvent.Outbound event)
-    {
-        outgoingCounter.updateCounter();
-    }
+   public void sendPacket(Packet<?> p) {
+      if (mc.getConnection() != null) {
+         PACKET_CACHE.add(p);
+         mc.getConnection().send(p);
+      }
+   }
 
-    @EventListener
-    public void onPacketOutbound(PacketEvent.Inbound event)
-    {
-        incomingCounter.updateCounter();
-    }
+   public void sendQuietPacket(Packet<?> p) {
+      if (mc.getConnection() != null) {
+         PACKET_CACHE.add(p);
+         ((IClientPlayNetworkHandler)mc.getConnection()).sendQuietPacket(p);
+      }
+   }
 
-    public void connect(final ServerAddress address, final ServerData info)
-    {
-        if (mc.getConnection() == null)
-        {
-            return;
-        }
-        mc.getConnection().getConnection().initiateServerboundPlayConnection(address.getHost(), address.getPort(),
-                new ClientHandshakePacketListenerImpl(mc.getConnection().getConnection(), mc, info, null, false, null, null, null));
-    }
+   public void sendSequencedPacket(PredictiveAction p) {
+      if (mc.level != null) {
+         try (BlockStatePredictionHandler updater = ((AccessorClientWorld)mc.level).hookGetPendingUpdateManager().startPredicting()) {
+            int i = updater.currentSequence();
+            Packet<ServerGamePacketListener> packet = p.predict(i);
+            this.sendPacket(packet);
+         }
+      }
+   }
 
-    /**
-     * @param p
-     */
-    public void sendPacket(final Packet<?> p)
-    {
-        if (mc.getConnection() != null)
-        {
-            PACKET_CACHE.add(p);
-            mc.getConnection().send(p);
-        }
-    }
+   public int getClientLatency() {
+      if (mc.getConnection() != null) {
+         PlayerInfo playerEntry = mc.getConnection().getPlayerInfo(mc.player.getGameProfile().getId());
+         if (playerEntry != null) {
+            return playerEntry.getLatency();
+         }
+      }
 
-    public void sendQuietPacket(final Packet<?> p)
-    {
-        if (mc.getConnection() != null)
-        {
-            PACKET_CACHE.add(p);
-            ((IClientPlayNetworkHandler) mc.getConnection()).sendQuietPacket(p);
-        }
-    }
+      return 0;
+   }
 
-    /**
-     * @param p
-     */
-    public void sendSequencedPacket(final PredictiveAction p)
-    {
-        if (mc.level != null)
-        {
-            BlockStatePredictionHandler updater =
-                    ((AccessorClientWorld) mc.level).hookGetPendingUpdateManager().startPredicting();
-            try
-            {
-                int i = updater.currentSequence();
-                Packet<ServerGamePacketListener> packet = p.predict(i);
-                sendPacket(packet);
-            }
-            catch (Throwable e)
-            {
-                e.printStackTrace();
-                if (updater != null)
-                {
-                    try
-                    {
-                        updater.close();
-                    }
-                    catch (Throwable e1)
-                    {
-                        e1.printStackTrace();
-                        e.addSuppressed(e1);
-                    }
-                }
-                throw e;
-            }
-            if (updater != null)
-            {
-                updater.close();
-            }
-        }
-    }
+   public ServerAddress getAddress() {
+      return this.address;
+   }
 
-    /**
-     * @return
-     */
-    public int getClientLatency()
-    {
-        if (mc.getConnection() != null)
-        {
-            final PlayerInfo playerEntry =
-                    mc.getConnection().getPlayerInfo(mc.player.getGameProfile().getId());
-            if (playerEntry != null)
-            {
-                return playerEntry.getLatency();
-            }
-        }
-        return 0;
-    }
+   public void setAddress(ServerAddress address) {
+      this.address = address;
+   }
 
-    public ServerAddress getAddress()
-    {
-        return address;
-    }
+   public ServerData getInfo() {
+      return this.info;
+   }
 
-    public void setAddress(ServerAddress address)
-    {
-        this.address = address;
-    }
+   public void setInfo(ServerData info) {
+      this.info = info;
+   }
 
-    public ServerData getInfo()
-    {
-        return info;
-    }
+   public boolean isCrystalPvpCC() {
+      return this.getServerIp().contains("crystalpvp.cc");
+   }
 
-    public void setInfo(ServerData info)
-    {
-        this.info = info;
-    }
+   public boolean is2b2t() {
+      return this.getServerIp().contains("2b2t.org");
+   }
 
-    public boolean isCrystalPvpCC()
-    {
-        return getServerIp().contains("crystalpvp.cc");
-    }
+   public int getOutgoingPPS() {
+      return this.outgoingCounter.getPerSecond();
+   }
 
-    public boolean is2b2t()
-    {
-        return getServerIp().contains("2b2t.org");
-    }
+   public int getIncomingPPS() {
+      return this.incomingCounter.getPerSecond();
+   }
 
-    public int getOutgoingPPS()
-    {
-        return outgoingCounter.getPerSecond();
-    }
+   public String getServerIp() {
+      return this.info != null ? this.info.ip : "Singleplayer";
+   }
 
-    public int getIncomingPPS()
-    {
-        return incomingCounter.getPerSecond();
-    }
-
-    public String getServerIp()
-    {
-        if (info != null)
-        {
-            return info.ip;
-        }
-        return "Singleplayer";
-    }
-
-    /**
-     * @param p
-     * @return
-     */
-    public boolean isCached(Packet<?> p)
-    {
-        return PACKET_CACHE.contains(p);
-    }
+   public boolean isCached(Packet<?> p) {
+      return PACKET_CACHE.contains(p);
+   }
 }

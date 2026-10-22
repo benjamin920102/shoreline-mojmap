@@ -1,5 +1,6 @@
 package net.shoreline.client.impl.gui.click.impl.config.setting;
 
+import java.awt.Color;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
 import net.shoreline.client.api.config.Config;
@@ -12,154 +13,81 @@ import net.shoreline.client.impl.manager.world.sound.SoundManager;
 import net.shoreline.client.impl.module.client.ClickGuiModule;
 import net.shoreline.client.init.Managers;
 
-import java.awt.*;
+public class BindButton extends ConfigButton<Macro> {
+   private boolean listening;
 
-import static org.lwjgl.glfw.GLFW.*;
+   public BindButton(CategoryFrame frame, ModuleButton moduleButton, Config<Macro> config, float x, float y) {
+      super(frame, moduleButton, config, x, y);
+   }
 
-/**
- * @author linus
- * @since 1.0
- */
-public class BindButton extends ConfigButton<Macro>
-{
-    // Check for whether we are listening for an input
-    private boolean listening;
+   @Override
+   public void render(GuiGraphics context, float ix, float iy, float mouseX, float mouseY, float delta) {
+      this.setHeight(RenderManager.textHeight() + 4.0F);
+      this.x = ix;
+      this.y = iy;
+      Macro macro = this.config.getValue();
+      String val = this.listening ? "..." : macro.getKeyName();
+      boolean state = this.isWithin(mouseX, mouseY);
+      if (state != this.hoverAnimation.getState()) {
+         this.hoverAnimation.setState(state);
+      }
 
-    /**
-     * @param frame
-     * @param config
-     * @param x
-     * @param y
-     */
-    public BindButton(CategoryFrame frame, ModuleButton moduleButton, Config<Macro> config, float x, float y)
-    {
-        super(frame, moduleButton, config, x, y);
-    }
+      int hoverAlpha = (int)(80.0 * Mth.clamp(this.hoverAnimation.getFactor(), 0.0, 1.0));
+      this.rect(context, new Color(hoverAlpha, hoverAlpha, hoverAlpha, hoverAlpha).getRGB());
+      int whiteText = -1;
+      this.drawStringScaled(context, this.config.getName(), ix + 2.0F * ClickGuiModule.CLICK_GUI_SCALE, iy + 4.0F * ClickGuiModule.CLICK_GUI_SCALE, whiteText);
+      float textLeng = RenderManager.textWidth(this.config.getName()) * ClickGuiModule.CLICK_GUI_SCALE;
+      int grayText = -5592406;
+      this.drawStringScaled(context, " " + val, ix + 2.0F * ClickGuiModule.CLICK_GUI_SCALE + textLeng, iy + 4.0F * ClickGuiModule.CLICK_GUI_SCALE, grayText);
+   }
 
-    /**
-     * @param context
-     * @param ix
-     * @param iy
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    @Override
-    public void render(GuiGraphics context, float ix, float iy, float mouseX,
-                       float mouseY, float delta)
-    {
-        setHeight(RenderManager.textHeight() + 4.0f);
-
-        x = ix;
-        y = iy;
-        final Macro macro = config.getValue();
-        String val = listening ? "..." : macro.getKeyName();
-
-        boolean state = isWithin(mouseX, mouseY);
-        if (state != hoverAnimation.getState())
-        {
-            hoverAnimation.setState(state);
-        }
-        int hoverAlpha = (int) (80 * Mth.clamp(hoverAnimation.getFactor(), 0.0f, 1.0f));
-
-        rect(context, new Color(hoverAlpha, hoverAlpha, hoverAlpha, hoverAlpha).getRGB());
-
-        int whiteText = -1;
-        drawStringScaled(context, config.getName(), ix + (2.0f * ClickGuiModule.CLICK_GUI_SCALE), iy + (4.0f * ClickGuiModule.CLICK_GUI_SCALE), whiteText);
-
-        float textLeng = RenderManager.textWidth(config.getName()) * ClickGuiModule.CLICK_GUI_SCALE;
-
-        int grayText = 0xFFAAAAAA;
-        drawStringScaled(context, " " + val, ix + (2.0F * ClickGuiModule.CLICK_GUI_SCALE) + textLeng, iy + (4.0F * ClickGuiModule.CLICK_GUI_SCALE), grayText);
-    }
-
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseClicked(double mouseX, double mouseY, int button)
-    {
-        if (isWithin(mouseX, mouseY))
-        {
-            if (button == GLFW_MOUSE_BUTTON_1)
-            {
-                listening = !listening;
-            }
-            else if (button == GLFW_MOUSE_BUTTON_2 && !listening)
-            {
-                // Reset the bind
-                ((MacroConfig) config).setValue(GLFW_KEY_UNKNOWN);
-            }
-            else
-            {
-                if (listening)
-                {
-                    // Ignore Right click
-                    if (button != GLFW_MOUSE_BUTTON_2)
-                    {
-                        // Mouse bind
-                        ((MacroConfig) config).setValue(1000 + button);
-                    }
-                    listening = false;
-                }
+   @Override
+   public void mouseClicked(double mouseX, double mouseY, int button) {
+      if (this.isWithin(mouseX, mouseY)) {
+         if (button == 0) {
+            this.listening = !this.listening;
+         } else if (button == 1 && !this.listening) {
+            ((MacroConfig)this.config).setValue(-1);
+         } else if (this.listening) {
+            if (button != 1) {
+               ((MacroConfig)this.config).setValue(1000 + button);
             }
 
-            if (ClickGuiModule.getInstance().getSounds())
-            {
-                Managers.SOUND.playSound(SoundManager.GUI_CLICK);
-            }
-        }
-    }
+            this.listening = false;
+         }
 
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseReleased(double mouseX, double mouseY, int button)
-    {
+         if (ClickGuiModule.getInstance().getSounds()) {
+            Managers.SOUND.playSound(SoundManager.GUI_CLICK);
+         }
+      }
+   }
 
-    }
+   @Override
+   public void mouseReleased(double mouseX, double mouseY, int button) {
+   }
 
-    /**
-     * @param keyCode
-     * @param scanCode
-     * @param modifiers
-     */
-    @Override
-    public void keyPressed(int keyCode, int scanCode, int modifiers)
-    {
-        if (listening)
-        {
-            // unbind
-            if (keyCode == GLFW_KEY_ESCAPE || keyCode == GLFW_KEY_BACKSPACE)
-            {
-                ((MacroConfig) config).setValue(GLFW_KEY_UNKNOWN);
-            }
-            else
-            {
-                ((MacroConfig) config).setValue(keyCode);
-            }
-            listening = false;
-        }
-    }
+   @Override
+   public void keyPressed(int keyCode, int scanCode, int modifiers) {
+      if (this.listening) {
+         if (keyCode != 256 && keyCode != 259) {
+            ((MacroConfig)this.config).setValue(keyCode);
+         } else {
+            ((MacroConfig)this.config).setValue(-1);
+         }
 
-    @Override
-    public void charTyped(char character, int modifiers)
-    {
+         this.listening = false;
+      }
+   }
 
-    }
+   @Override
+   public void charTyped(char character, int modifiers) {
+   }
 
-    public boolean isListening()
-    {
-        return listening;
-    }
+   public boolean isListening() {
+      return this.listening;
+   }
 
-    public void setListening(boolean listening)
-    {
-        this.listening = listening;
-    }
+   public void setListening(boolean listening) {
+      this.listening = listening;
+   }
 }

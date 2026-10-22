@@ -17,72 +17,83 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.At.Shift;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * @author linus
- * @since 1.0
- */
-@Mixin(FireworkRocketEntity.class)
-public class MixinFireworkRocketEntity implements Globals
-{
-    //
-    @Shadow
-    private int life;
+@Mixin({FireworkRocketEntity.class})
+public class MixinFireworkRocketEntity implements Globals {
+   @Shadow
+   private int life;
+   @Shadow
+   private int lifetime;
 
-    @Shadow
-    private int lifetime;
+   @Inject(
+      method = {"tick()V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void hookTick(CallbackInfo ci) {
+      FireworkTickEvent event = new FireworkTickEvent((FireworkRocketEntity)(Object)this);
+      EventBus.INSTANCE.dispatch(event);
+      if (event.isCanceled()) {
+         ci.cancel();
+      }
+   }
 
-    @Inject(method = "tick", at = @At(value = "HEAD"), cancellable = true)
-    private void hookTick(CallbackInfo ci)
-    {
-        FireworkTickEvent event = new FireworkTickEvent((FireworkRocketEntity) (Object) this);
-        EventBus.INSTANCE.dispatch(event);
-        if (event.isCanceled())
-        {
+   @Redirect(
+      method = {"tick()V"},
+      at = @At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/world/entity/LivingEntity;setDeltaMovement(Lnet/minecraft/world/phys/Vec3;)V"
+      )
+   )
+   private void hookSetVelocity(LivingEntity entity, Vec3 velocity) {
+      if (entity instanceof LocalPlayer) {
+         FireworkVelocityEvent fireworkVelocityEvent = new FireworkVelocityEvent();
+         EventBus.INSTANCE.dispatch(fireworkVelocityEvent);
+         if (!fireworkVelocityEvent.isCanceled()) {
+            entity.setDeltaMovement(velocity);
+         }
+      }
+   }
+
+   @Inject(
+      method = {"tick()V"},
+      at = {@At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/world/entity/projectile/FireworkRocketEntity;updateRotation()V",
+         shift = Shift.AFTER
+      )},
+      cancellable = true
+   )
+   private void hookTickPre(CallbackInfo ci) {
+      if (this.life > this.lifetime) {
+         FireworkRocketEntity rocketEntity = (FireworkRocketEntity)(Object)this;
+         RemoveFireworkEvent removeFireworkEvent = new RemoveFireworkEvent(rocketEntity);
+         EventBus.INSTANCE.dispatch(removeFireworkEvent);
+         if (removeFireworkEvent.isCanceled()) {
             ci.cancel();
-        }
-    }
+            if (this.life == 0 && !rocketEntity.isSilent()) {
+               mc.level
+                  .playSound(
+                     null, rocketEntity.getX(), rocketEntity.getY(), rocketEntity.getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.AMBIENT, 3.0F, 1.0F
+                  );
+            }
 
-    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;setDeltaMovement(Lnet/minecraft/world/phys/Vec3;)V"))
-    private void hookSetVelocity(LivingEntity entity, Vec3 velocity)
-    {
-        if (entity instanceof LocalPlayer)
-        {
-            FireworkVelocityEvent fireworkVelocityEvent = new FireworkVelocityEvent();
-            EventBus.INSTANCE.dispatch(fireworkVelocityEvent);
-            if (!fireworkVelocityEvent.isCanceled())
-            {
-                entity.setDeltaMovement(velocity);
+            this.life++;
+            if (mc.level.isClientSide && this.life % 2 < 2) {
+               mc.level
+                  .addParticle(
+                     ParticleTypes.FIREWORK,
+                     rocketEntity.getX(),
+                     rocketEntity.getY(),
+                     rocketEntity.getZ(),
+                     mc.level.random.nextGaussian() * 0.05,
+                     -rocketEntity.getDeltaMovement().y * 0.5,
+                     mc.level.random.nextGaussian() * 0.05
+                  );
             }
-        }
-    }
-
-    /**
-     * @param ci
-     */
-    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/projectile/FireworkRocketEntity;updateRotation()V", shift = At.Shift.AFTER), cancellable = true)
-    private void hookTickPre(CallbackInfo ci)
-    {
-        if (life <= lifetime)
-        {
-            return;
-        }
-        FireworkRocketEntity rocketEntity = ((FireworkRocketEntity) (Object) this);
-        RemoveFireworkEvent removeFireworkEvent = new RemoveFireworkEvent(rocketEntity);
-        EventBus.INSTANCE.dispatch(removeFireworkEvent);
-        if (removeFireworkEvent.isCanceled())
-        {
-            ci.cancel();
-            if (life == 0 && !rocketEntity.isSilent())
-            {
-                mc.level.playSound(null, rocketEntity.getX(), rocketEntity.getY(), rocketEntity.getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.AMBIENT, 3.0f, 1.0f);
-            }
-            ++life;
-            if (mc.level.isClientSide && life % 2 < 2)
-            {
-                mc.level.addParticle(ParticleTypes.FIREWORK, rocketEntity.getX(), rocketEntity.getY(), rocketEntity.getZ(), mc.level.random.nextGaussian() * 0.05, -rocketEntity.getDeltaMovement().y * 0.5, mc.level.random.nextGaussian() * 0.05);
-            }
-        }
-    }
+         }
+      }
+   }
 }

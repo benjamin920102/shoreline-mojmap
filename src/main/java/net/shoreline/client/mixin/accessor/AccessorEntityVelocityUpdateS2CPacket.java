@@ -5,22 +5,17 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/**
- * @author Gavin
- * @since 1.0
- */
-@Mixin(ClientboundSetEntityMotionPacket.class)
-public interface AccessorEntityVelocityUpdateS2CPacket
-{
-    @Accessor("xa")
-    @Mutable
-    void setVelocityX(int velocityX);
+@Mixin({ClientboundSetEntityMotionPacket.class})
+public interface AccessorEntityVelocityUpdateS2CPacket {
+   @Accessor("xa")
+   @Mutable
+   void setVelocityX(int var1);
 
-    @Accessor("ya")
-    @Mutable
-    void setVelocityY(int velocityY);
+   @Accessor("ya")
+   @Mutable
+   void setVelocityY(int var1);
 
-    @Accessor("za")
-    @Mutable
-    void setVelocityZ(int velocityZ);
+   @Accessor("za")
+   @Mutable
+   void setVelocityZ(int var1);
 }

@@ -4,22 +4,18 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class FallFlyingEvent extends Event
-{
-    private boolean isFallFlying;
+public class FallFlyingEvent extends Event {
+   private boolean isFallFlying;
 
-    public FallFlyingEvent(boolean isFallFlying)
-    {
-        this.isFallFlying = isFallFlying;
-    }
+   public FallFlyingEvent(boolean isFallFlying) {
+      this.isFallFlying = isFallFlying;
+   }
 
-    public void setFallFlying(boolean fallFlying)
-    {
-        isFallFlying = fallFlying;
-    }
+   public void setFallFlying(boolean fallFlying) {
+      this.isFallFlying = fallFlying;
+   }
 
-    public boolean isFallFlying()
-    {
-        return isFallFlying;
-    }
+   public boolean isFallFlying() {
+      return this.isFallFlying;
+   }
 }

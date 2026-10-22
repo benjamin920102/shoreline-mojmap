@@ -1,5 +1,8 @@
 package net.shoreline.client.impl.gui.click.impl.config;
 
+import java.awt.Color;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
 import net.shoreline.client.api.config.Config;
@@ -9,337 +12,240 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.api.render.RenderManager;
 import net.shoreline.client.impl.gui.click.component.Button;
 import net.shoreline.client.impl.gui.click.impl.SearchButton;
-import net.shoreline.client.impl.gui.click.impl.config.setting.*;
+import net.shoreline.client.impl.gui.click.impl.config.setting.BindButton;
+import net.shoreline.client.impl.gui.click.impl.config.setting.CheckboxButton;
+import net.shoreline.client.impl.gui.click.impl.config.setting.ColorButton;
+import net.shoreline.client.impl.gui.click.impl.config.setting.ConfigButton;
+import net.shoreline.client.impl.gui.click.impl.config.setting.DropdownButton;
+import net.shoreline.client.impl.gui.click.impl.config.setting.SliderButton;
+import net.shoreline.client.impl.gui.click.impl.config.setting.TextButton;
 import net.shoreline.client.impl.manager.world.sound.SoundManager;
 import net.shoreline.client.impl.module.client.ClickGuiModule;
 import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.render.animation.Animation;
 import net.shoreline.client.util.render.animation.Easing;
-import org.lwjgl.glfw.GLFW;
 
-import java.awt.*;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+public class ModuleButton extends Button {
+   private final Module module;
+   private final List<ConfigButton<?>> configComponents = new CopyOnWriteArrayList<>();
+   private float off;
+   private boolean open;
+   private final Animation settingsAnimation = new Animation(false, 200.0F, Easing.CUBIC_IN_OUT);
 
-/**
- * @author linus
- * @see Module
- * @see CategoryFrame
- * @since 1.0
- */
-public class ModuleButton extends Button
-{
-    private final Module module;
-    //
-    private final List<ConfigButton<?>> configComponents =
-            new CopyOnWriteArrayList<>();
-    //
-    private float off;
-    //
-    private boolean open;
-    private final Animation settingsAnimation = new Animation(false, 200, Easing.CUBIC_IN_OUT);
+   public ModuleButton(Module module, CategoryFrame frame, float x, float y) {
+      super(frame, x, y, 103.0F, 13.0F);
+      this.module = module;
 
-    /**
-     * @param module
-     * @param frame
-     * @param x
-     * @param y
-     */
-    @SuppressWarnings("unchecked")
-    public ModuleButton(Module module, CategoryFrame frame, float x, float y)
-    {
-        super(frame, x, y, 103.0f, 13.0f);
-        this.module = module;
-        for (Config<?> config : module.getConfigs())
-        {
-            if (config.getName().equalsIgnoreCase("Enabled"))
-            {
-                continue;
+      for (Config<?> config : module.getConfigs()) {
+         if (!config.getName().equalsIgnoreCase("Enabled")) {
+            if (config.getValue() instanceof Boolean) {
+               this.configComponents.add(new CheckboxButton(frame, this, (Config<Boolean>)config, x, y));
+            } else if (config.getValue() instanceof Double) {
+               this.configComponents.add(new SliderButton<>(frame, this, (Config<Number>)(Config<?>)config, x, y));
+            } else if (config.getValue() instanceof Float) {
+               this.configComponents.add(new SliderButton<>(frame, this, (Config<Number>)(Config<?>)config, x, y));
+            } else if (config.getValue() instanceof Integer) {
+               this.configComponents.add(new SliderButton<>(frame, this, (Config<Number>)(Config<?>)config, x, y));
+            } else if (config.getValue() instanceof Enum) {
+               this.configComponents.add(new DropdownButton(frame, this, (Config<Enum<?>>)config, x, y));
+            } else if (config.getValue() instanceof String) {
+               this.configComponents.add(new TextButton(frame, this, (Config<String>)config, x, y));
+            } else if (config.getValue() instanceof Macro) {
+               this.configComponents.add(new BindButton(frame, this, (Config<Macro>)config, x, y));
+            } else if (config.getValue() instanceof Color) {
+               this.configComponents.add(new ColorButton(frame, this, (Config<Color>)config, x, y));
             }
-            if (config.getValue() instanceof Boolean)
-            {
-                configComponents.add(new CheckboxButton(frame, this,
-                        (Config<Boolean>) config, x, y));
-            }
-            else if (config.getValue() instanceof Double)
-            {
-                configComponents.add(new SliderButton<>(frame, this,
-                        (Config<Double>) config, x, y));
-            }
-            else if (config.getValue() instanceof Float)
-            {
-                configComponents.add(new SliderButton<>(frame, this,
-                        (Config<Float>) config, x, y));
-            }
-            else if (config.getValue() instanceof Integer)
-            {
-                configComponents.add(new SliderButton<>(frame, this,
-                        (Config<Integer>) config, x, y));
-            }
-            else if (config.getValue() instanceof Enum<?>)
-            {
-                configComponents.add(new DropdownButton(frame, this,
-                        (Config<Enum<?>>) config, x, y));
-            }
-            else if (config.getValue() instanceof String)
-            {
-                configComponents.add(new TextButton(frame, this,
-                        (Config<String>) config, x, y));
-            }
-            else if (config.getValue() instanceof Macro)
-            {
-                configComponents.add(new BindButton(frame, this,
-                        (Config<Macro>) config, x, y));
-            }
-            else if (config.getValue() instanceof Color)
-            {
-                configComponents.add(new ColorButton(frame, this,
-                        (Config<Color>) config, x, y));
-            }
-        }
-        open = false;
-    }
+         }
+      }
 
-    /**
-     * @param context
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    @Override
-    public void render(GuiGraphics context, float mouseX, float mouseY, float delta)
-    {
-        render(context, x, y, mouseX, mouseY, delta);
-    }
+      this.open = false;
+   }
 
-    /**
-     * @param context
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    public void render(GuiGraphics context, float ix, float iy, float mouseX,
-                       float mouseY, float delta)
-    {
-        setHeight(RenderManager.textHeight() + 4.0f);
-        x = ix;
-        y = iy;
-        float scaledTime = 1.0f;
-        boolean fill = !(module instanceof ToggleModule t) || (scaledTime = (float) t.getAnimation().getFactor()) > 0.01f;
-        scaledTime *= 1.7f;
-        if (module.getName().equalsIgnoreCase("ClickGui"))
-        {
-            scaledTime = 1.7f;
-        }
+   @Override
+   public void render(GuiGraphics context, float mouseX, float mouseY, float delta) {
+      this.render(context, this.x, this.y, mouseX, mouseY, delta);
+   }
 
+   public void render(GuiGraphics context, float ix, float iy, float mouseX, float mouseY, float delta) {
+      this.setHeight(RenderManager.textHeight() + 4.0F);
+      this.x = ix;
+      this.y = iy;
+      float scaledTime = 1.0F;
+      boolean fill = !(this.module instanceof ToggleModule t && !((scaledTime = (float)t.getAnimation().getFactor()) > 0.01F));
+      scaledTime *= 1.7F;
+      if (this.module.getName().equalsIgnoreCase("ClickGui")) {
+         scaledTime = 1.7F;
+      }
 
-        boolean state = isWithin(mouseX, mouseY);
-        if (state != hoverAnimation.getState())
-        {
-            hoverAnimation.setState(state);
-        }
-        boolean b2 = SearchButton.SEARCH_TEXT != null && !SearchButton.SEARCH_TEXT.isEmpty();
-        boolean b1 = b2 && !getModule().getName().toLowerCase().contains(SearchButton.SEARCH_TEXT.toLowerCase());
-        int hoverAlpha = (int) ((b1 ? 30 : 60) * Mth.clamp(hoverAnimation.getFactor(), 0.0f, 1.0f));
-        int hoverAlpha2 = (int) ((b1 ? 25 : 50) * Mth.clamp(hoverAnimation.getFactor(), 0.0f, 1.0f));
+      boolean state = this.isWithin(mouseX, mouseY);
+      if (state != this.hoverAnimation.getState()) {
+         this.hoverAnimation.setState(state);
+      }
 
-        int unfilledColor = ClickGuiModule.getInstance().fixTransparency(new Color(hoverAlpha, hoverAlpha, hoverAlpha, 51 + hoverAlpha).getRGB());
-        rect(context, fill ? ClickGuiModule.getInstance().getColor((b1 ? 50 : 100) + hoverAlpha2, scaledTime) : unfilledColor);
+      boolean b2 = SearchButton.SEARCH_TEXT != null && !SearchButton.SEARCH_TEXT.isEmpty();
+      boolean b1 = b2 && !this.getModule().getName().toLowerCase().contains(SearchButton.SEARCH_TEXT.toLowerCase());
+      int hoverAlpha = (int)((b1 ? 30 : 60) * Mth.clamp(this.hoverAnimation.getFactor(), 0.0, 1.0));
+      int hoverAlpha2 = (int)((b1 ? 25 : 50) * Mth.clamp(this.hoverAnimation.getFactor(), 0.0, 1.0));
+      int unfilledColor = ClickGuiModule.getInstance().fixTransparency(new Color(hoverAlpha, hoverAlpha, hoverAlpha, 51 + hoverAlpha).getRGB());
+      this.rect(context, fill ? ClickGuiModule.getInstance().getColor((b1 ? 50 : 100) + hoverAlpha2, scaledTime) : unfilledColor);
+      int whiteText = -1;
+      int grayText = -5592406;
+      int colorText = scaledTime > 0.99F ? whiteText : grayText;
+      if (b2) {
+         colorText = b1 ? grayText : whiteText;
+      }
 
-        int whiteText = -1;
-        int grayText = 0xFFAAAAAA;
-        int colorText = scaledTime > 0.99f ? whiteText : grayText;
-        if (b2)
-        {
-            colorText = b1 ? grayText : whiteText;
-        }
+      this.drawStringScaled(context, this.module.getName(), ix + 2.0F * ClickGuiModule.CLICK_GUI_SCALE, iy + 3.5F * ClickGuiModule.CLICK_GUI_SCALE, colorText);
+      if (this.settingsAnimation.getFactor() > 0.01F) {
+         this.off = this.y + this.height * ClickGuiModule.CLICK_GUI_SCALE + ClickGuiModule.CLICK_GUI_SCALE;
+         float fheight = 0.0F;
 
-        drawStringScaled(context, module.getName(), ix + (2.0f * ClickGuiModule.CLICK_GUI_SCALE), iy + (3.5f * ClickGuiModule.CLICK_GUI_SCALE), colorText);
-        if (settingsAnimation.getFactor() > 0.01f)
-        {
-            off = y + (height * ClickGuiModule.CLICK_GUI_SCALE) + ClickGuiModule.CLICK_GUI_SCALE;
-            float fheight = 0.0f;
-            for (ConfigButton<?> configButton : configComponents)
-            {
-                if (!configButton.getConfig().isVisible())
-                {
-                    continue;
-                }
-                fheight += configButton.getHeight();
-                if (configButton instanceof ColorButton colorPicker && colorPicker.getScaledTime() > 0.01f)
-                {
-                    fheight += colorPicker.getPickerHeight() * colorPicker.getScaledTime() * getScaledTime();
-                }
+         for (ConfigButton<?> configButton : this.configComponents) {
+            if (configButton.getConfig().isVisible()) {
+               fheight += configButton.getHeight();
+               if (configButton instanceof ColorButton colorPicker && colorPicker.getScaledTime() > 0.01F) {
+                  fheight += colorPicker.getPickerHeight() * colorPicker.getScaledTime() * this.getScaledTime();
+               }
             }
-            boolean canScissor = ClickGuiModule.getInstance().getScaleFactor() == 1.0F;
+         }
 
-            if (canScissor)
-            {
-                enableScissor(x, off - ClickGuiModule.CLICK_GUI_SCALE, x + (width * ClickGuiModule.CLICK_GUI_SCALE), off + (3.0f * ClickGuiModule.CLICK_GUI_SCALE + (fheight * settingsAnimation.getFactor())));
-            }
-            for (ConfigButton<?> configButton : configComponents)
-            {
-                if (!configButton.getConfig().isVisible())
-                {
-                    continue;
-                }
-                // run draw event
-                configButton.render(context, ix + (2.0f * ClickGuiModule.CLICK_GUI_SCALE), off, mouseX, mouseY, delta);
-                ((CategoryFrame) frame).offset((float) (configButton.getHeight() * settingsAnimation.getFactor()));
-                off += configButton.getHeight();
-            }
-            if (fill)
-            {
-                fill(context, ix, y + (height * ClickGuiModule.CLICK_GUI_SCALE), ClickGuiModule.CLICK_GUI_SCALE, off - (y + (height * ClickGuiModule.CLICK_GUI_SCALE)) + ClickGuiModule.CLICK_GUI_SCALE, ClickGuiModule.getInstance().getColor(100 + hoverAlpha2, scaledTime));
-                fill(context, ix + (width * ClickGuiModule.CLICK_GUI_SCALE) - ClickGuiModule.CLICK_GUI_SCALE, y + (height * ClickGuiModule.CLICK_GUI_SCALE), ClickGuiModule.CLICK_GUI_SCALE, off - (y + (height * ClickGuiModule.CLICK_GUI_SCALE)) + ClickGuiModule.CLICK_GUI_SCALE, ClickGuiModule.getInstance().getColor(100 + hoverAlpha2, scaledTime));
-                fill(context, ix, off + ClickGuiModule.CLICK_GUI_SCALE, width * ClickGuiModule.CLICK_GUI_SCALE, ClickGuiModule.CLICK_GUI_SCALE, ClickGuiModule.getInstance().getColor(100 + hoverAlpha2, scaledTime));
-            }
-            if (canScissor)
-            {
-                disableScissor();
-            }
-            ((CategoryFrame) frame).offset((float) (3.0f * ClickGuiModule.CLICK_GUI_SCALE * settingsAnimation.getFactor()));
-        }
-        else
-        {
-            for (ConfigButton<?> configButton : configComponents)
-            {
-                if (configButton instanceof BindButton bindButton)
-                {
-                    bindButton.setListening(false);
-                }
-                if (configButton instanceof TextButton textButton)
-                {
-                    textButton.endTyping();
-                }
-                if (configButton instanceof ColorButton colorButton)
-                {
-                    colorButton.endTyping();
-                }
-                if (configButton instanceof SliderButton sliderButton)
-                {
-                    sliderButton.endTyping();
-                }
-            }
-        }
-    }
+         boolean canScissor = ClickGuiModule.getInstance().getScaleFactor() == 1.0F;
+         if (canScissor) {
+            this.enableScissor(
+               this.x,
+               this.off - ClickGuiModule.CLICK_GUI_SCALE,
+               this.x + this.width * ClickGuiModule.CLICK_GUI_SCALE,
+               this.off + (3.0F * ClickGuiModule.CLICK_GUI_SCALE + fheight * this.settingsAnimation.getFactor())
+            );
+         }
 
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseClicked(double mouseX, double mouseY, int button)
-    {
-        if (isWithin(mouseX, mouseY))
-        {
-            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && module instanceof ToggleModule t)
-            {
-                t.toggle();
-                // ToggleGuiEvent toggleGuiEvent = new ToggleGuiEvent(t);
-                // Caspian.EVENT_HANDLER.dispatch(toggleGuiEvent);
+         for (ConfigButton<?> configButtonx : this.configComponents) {
+            if (configButtonx.getConfig().isVisible()) {
+               configButtonx.render(context, ix + 2.0F * ClickGuiModule.CLICK_GUI_SCALE, this.off, mouseX, mouseY, delta);
+               ((CategoryFrame)this.frame).offset((float)(configButtonx.getHeight() * this.settingsAnimation.getFactor()));
+               this.off = this.off + configButtonx.getHeight();
             }
-            else if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT)
-            {
-                open = !open;
-                settingsAnimation.setState(open);
+         }
+
+         if (fill) {
+            this.fill(
+               context,
+               ix,
+               this.y + this.height * ClickGuiModule.CLICK_GUI_SCALE,
+               ClickGuiModule.CLICK_GUI_SCALE,
+               this.off - (this.y + this.height * ClickGuiModule.CLICK_GUI_SCALE) + ClickGuiModule.CLICK_GUI_SCALE,
+               ClickGuiModule.getInstance().getColor(100 + hoverAlpha2, scaledTime)
+            );
+            this.fill(
+               context,
+               ix + this.width * ClickGuiModule.CLICK_GUI_SCALE - ClickGuiModule.CLICK_GUI_SCALE,
+               this.y + this.height * ClickGuiModule.CLICK_GUI_SCALE,
+               ClickGuiModule.CLICK_GUI_SCALE,
+               this.off - (this.y + this.height * ClickGuiModule.CLICK_GUI_SCALE) + ClickGuiModule.CLICK_GUI_SCALE,
+               ClickGuiModule.getInstance().getColor(100 + hoverAlpha2, scaledTime)
+            );
+            this.fill(
+               context,
+               ix,
+               this.off + ClickGuiModule.CLICK_GUI_SCALE,
+               this.width * ClickGuiModule.CLICK_GUI_SCALE,
+               ClickGuiModule.CLICK_GUI_SCALE,
+               ClickGuiModule.getInstance().getColor(100 + hoverAlpha2, scaledTime)
+            );
+         }
+
+         if (canScissor) {
+            this.disableScissor();
+         }
+
+         ((CategoryFrame)this.frame).offset((float)(3.0F * ClickGuiModule.CLICK_GUI_SCALE * this.settingsAnimation.getFactor()));
+      } else {
+         for (ConfigButton<?> configButtonxx : this.configComponents) {
+            if (configButtonxx instanceof BindButton bindButton) {
+               bindButton.setListening(false);
             }
 
-            if (ClickGuiModule.getInstance().getSounds())
-            {
-                Managers.SOUND.playSound(SoundManager.GUI_CLICK);
+            if (configButtonxx instanceof TextButton textButton) {
+               textButton.endTyping();
             }
-        }
-        if (open)
-        {
-            for (ConfigButton<?> component : configComponents)
-            {
-                component.mouseClicked(mouseX, mouseY, button);
+
+            if (configButtonxx instanceof ColorButton colorButton) {
+               colorButton.endTyping();
             }
-        }
-    }
 
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseReleased(double mouseX, double mouseY, int button)
-    {
-        if (open)
-        {
-            for (ConfigButton<?> component : configComponents)
-            {
-                component.mouseReleased(mouseX, mouseY, button);
+            if (configButtonxx instanceof SliderButton sliderButton) {
+               sliderButton.endTyping();
             }
-        }
-    }
+         }
+      }
+   }
 
-    /**
-     * @param keyCode
-     * @param scanCode
-     * @param modifiers
-     */
-    @Override
-    public void keyPressed(int keyCode, int scanCode, int modifiers)
-    {
-        if (open)
-        {
-            for (ConfigButton<?> component : configComponents)
-            {
-                component.keyPressed(keyCode, scanCode, modifiers);
-            }
-        }
-    }
+   @Override
+   public void mouseClicked(double mouseX, double mouseY, int button) {
+      if (this.isWithin(mouseX, mouseY)) {
+         if (button == 0 && this.module instanceof ToggleModule t) {
+            t.toggle();
+         } else if (button == 1) {
+            this.open = !this.open;
+            this.settingsAnimation.setState(this.open);
+         }
 
-    @Override
-    public void charTyped(char character, int modifiers)
-    {
-        if (open)
-        {
-            for (ConfigButton<?> component : configComponents)
-            {
-                component.charTyped(character, modifiers);
-            }
-        }
-    }
+         if (ClickGuiModule.getInstance().getSounds()) {
+            Managers.SOUND.playSound(SoundManager.GUI_CLICK);
+         }
+      }
 
-    /**
-     * @param in
-     */
-    public void offset(float in)
-    {
-        off += in;
-    }
+      if (this.open) {
+         for (ConfigButton<?> component : this.configComponents) {
+            component.mouseClicked(mouseX, mouseY, button);
+         }
+      }
+   }
 
-    /**
-     * @return
-     */
-    public boolean isOpen()
-    {
-        return open;
-    }
+   @Override
+   public void mouseReleased(double mouseX, double mouseY, int button) {
+      if (this.open) {
+         for (ConfigButton<?> component : this.configComponents) {
+            component.mouseReleased(mouseX, mouseY, button);
+         }
+      }
+   }
 
-    public float getScaledTime()
-    {
-        return (float) settingsAnimation.getFactor();
-    }
+   @Override
+   public void keyPressed(int keyCode, int scanCode, int modifiers) {
+      if (this.open) {
+         for (ConfigButton<?> component : this.configComponents) {
+            component.keyPressed(keyCode, scanCode, modifiers);
+         }
+      }
+   }
 
-    /**
-     * @return
-     */
-    public Module getModule()
-    {
-        return module;
-    }
+   @Override
+   public void charTyped(char character, int modifiers) {
+      if (this.open) {
+         for (ConfigButton<?> component : this.configComponents) {
+            component.charTyped(character, modifiers);
+         }
+      }
+   }
 
-    /**
-     * @return
-     */
-    public List<ConfigButton<?>> getConfigButtons()
-    {
-        return configComponents;
-    }
+   public void offset(float in) {
+      this.off += in;
+   }
+
+   public boolean isOpen() {
+      return this.open;
+   }
+
+   public float getScaledTime() {
+      return (float)this.settingsAnimation.getFactor();
+   }
+
+   public Module getModule() {
+      return this.module;
+   }
+
+   public List<ConfigButton<?>> getConfigButtons() {
+      return this.configComponents;
+   }
 }

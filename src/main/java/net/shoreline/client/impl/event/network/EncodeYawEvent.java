@@ -4,7 +4,5 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class EncodeYawEvent extends Event
-{
-
+public class EncodeYawEvent extends Event {
 }

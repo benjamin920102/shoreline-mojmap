@@ -7,29 +7,25 @@ import net.shoreline.client.api.command.Command;
 import net.shoreline.client.mixin.accessor.AccessorMinecraftClient;
 import net.shoreline.client.util.chat.ChatUtil;
 
-public class LeaveCommand extends Command
-{
-    public LeaveCommand()
-    {
-        super("Leave", "Leaves the game without disconnecting from the server", literal("leave"));
-    }
+public class LeaveCommand extends Command {
+   public LeaveCommand() {
+      super("Leave", "Leaves the game without disconnecting from the server", literal("leave"));
+   }
 
-    @Override
-    public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder)
-    {
-        builder.executes(c ->
-        {
-            if (mc.isLocalServer())
-            {
-                ChatUtil.error("Not connected to a server!");
-                return 0;
-            }
+   @Override
+   public void buildCommand(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
+      builder.executes(c -> {
+         if (mc.isLocalServer()) {
+            ChatUtil.error("Not connected to a server!");
+            return 0;
+         } else {
             mc.getConnection().close();
             mc.level = null;
             mc.player = null;
-            ((AccessorMinecraftClient) mc).hookSetWorld(null);
+            ((AccessorMinecraftClient)mc).hookSetWorld(null);
             mc.forceSetScreen(new TitleScreen());
             return 1;
-        });
-    }
+         }
+      });
+   }
 }

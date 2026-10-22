@@ -7,26 +7,22 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.entity.player.LedgeClipEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 
-public class SafeWalkModule extends ToggleModule
-{
-    Config<Boolean> sneakConfig = register(new BooleanConfig("Sneak", "Sneaks at the edge of blocks", false));
+public class SafeWalkModule extends ToggleModule {
+   Config<Boolean> sneakConfig = this.register(new BooleanConfig("Sneak", "Sneaks at the edge of blocks", false));
 
-    public SafeWalkModule()
-    {
-        super("SafeWalk", "Prevents you from walking off ledges", ModuleCategory.MOVEMENT);
-    }
+   public SafeWalkModule() {
+      super("SafeWalk", "Prevents you from walking off ledges", ModuleCategory.MOVEMENT);
+   }
 
-    @EventListener
-    public void onLedgeClip(LedgeClipEvent event)
-    {
-        if (!mc.player.isShiftKeyDown())
-        {
-            if (sneakConfig.getValue())
-            {
-                mc.player.setShiftKeyDown(true);
-            }
-            event.cancel();
-            event.setClipped(true);
-        }
-    }
+   @EventListener
+   public void onLedgeClip(LedgeClipEvent event) {
+      if (!mc.player.isShiftKeyDown()) {
+         if (this.sneakConfig.getValue()) {
+            mc.player.setShiftKeyDown(true);
+         }
+
+         event.cancel();
+         event.setClipped(true);
+      }
+   }
 }

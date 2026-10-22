@@ -1,5 +1,6 @@
 package net.shoreline.client.impl.gui.click.impl.config.setting;
 
+import java.awt.Color;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
@@ -13,168 +14,104 @@ import net.shoreline.client.init.Managers;
 import net.shoreline.client.util.math.timer.CacheTimer;
 import net.shoreline.client.util.math.timer.Timer;
 import org.apache.commons.lang3.ArrayUtils;
-import org.lwjgl.glfw.GLFW;
 
-import java.awt.*;
+public class TextButton extends ConfigButton<String> {
+   private char[] buffer;
+   private boolean typing;
+   private boolean idling;
+   private final Timer idleTimer = new CacheTimer();
 
-/**
- * @author linus
- * @since 1.0
- */
-public class TextButton extends ConfigButton<String>
-{
+   public TextButton(CategoryFrame frame, ModuleButton moduleButton, Config<String> config, float x, float y) {
+      super(frame, moduleButton, config, x, y);
+      this.buffer = config.getValue().toCharArray();
+   }
 
-    private char[] buffer;
-    private boolean typing;
-    // Insertion point
-    private boolean idling;
-    private final Timer idleTimer = new CacheTimer();
+   @Override
+   public void render(GuiGraphics context, float ix, float iy, float mouseX, float mouseY, float delta) {
+      this.setHeight(RenderManager.textHeight() + 4.0F);
+      this.x = ix;
+      this.y = iy;
+      int whiteText = -1;
+      boolean state = this.isWithin(mouseX, mouseY);
+      if (state != this.hoverAnimation.getState()) {
+         this.hoverAnimation.setState(state);
+      }
 
-    /**
-     * @param frame
-     * @param config
-     */
-    public TextButton(CategoryFrame frame, ModuleButton moduleButton, Config<String> config, float x, float y)
-    {
-        super(frame, moduleButton, config, x, y);
-        buffer = config.getValue().toCharArray();
-    }
+      int hoverAlpha = (int)(80.0 * Mth.clamp(this.hoverAnimation.getFactor(), 0.0, 1.0));
+      this.rect(context, new Color(hoverAlpha, hoverAlpha, hoverAlpha, hoverAlpha).getRGB());
+      String renderText = this.typing
+         ? new String(this.buffer) + this.getInsertionPoint()
+         : this.config.getName() + ChatFormatting.GRAY + " " + new String(this.buffer);
+      this.drawStringScaled(context, renderText, ix + 2.0F * ClickGuiModule.CLICK_GUI_SCALE, iy + 4.0F * ClickGuiModule.CLICK_GUI_SCALE, whiteText);
+   }
 
-    /**
-     * @param context
-     * @param ix
-     * @param iy
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    @Override
-    public void render(GuiGraphics context, float ix, float iy, float mouseX, float mouseY, float delta)
-    {
-        setHeight(RenderManager.textHeight() + 4.0f);
-        x = ix;
-        y = iy;
-        int whiteText = -1;
-        boolean state = isWithin(mouseX, mouseY);
-        if (state != hoverAnimation.getState())
-        {
-            hoverAnimation.setState(state);
-        }
-        int hoverAlpha = (int) (80 * Mth.clamp(hoverAnimation.getFactor(), 0.0f, 1.0f));
-        rect(context, new Color(hoverAlpha, hoverAlpha, hoverAlpha, hoverAlpha).getRGB());
-
-        String renderText = typing ? new String(buffer) + getInsertionPoint() : config.getName() + ChatFormatting.GRAY + " " + new String(buffer);
-        drawStringScaled(context, renderText, ix + (2.0f * ClickGuiModule.CLICK_GUI_SCALE), iy + (4.0f * ClickGuiModule.CLICK_GUI_SCALE), whiteText);
-    }
-
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseClicked(double mouseX, double mouseY, int button)
-    {
-        if (isWithin(mouseX, mouseY))
-        {
-            if (button == GLFW.GLFW_MOUSE_BUTTON_1)
-            {
-                if (typing)
-                {
-                    config.setValue(new String(buffer));
-                    typing = false;
-                }
-                else
-                {
-                    typing = true;
-                }
-
-                if (ClickGuiModule.getInstance().getSounds())
-                {
-                    Managers.SOUND.playSound(SoundManager.GUI_CLICK);
-                }
+   @Override
+   public void mouseClicked(double mouseX, double mouseY, int button) {
+      if (this.isWithin(mouseX, mouseY)) {
+         if (button == 0) {
+            if (this.typing) {
+               this.config.setValue(new String(this.buffer));
+               this.typing = false;
+            } else {
+               this.typing = true;
             }
-        }
-        else
-        {
-            endTyping();
-        }
-    }
 
-    /**
-     * @param mouseX
-     * @param mouseY
-     * @param button
-     */
-    @Override
-    public void mouseReleased(double mouseX, double mouseY, int button)
-    {
-
-    }
-
-    /**
-     * @param keyCode
-     * @param scanCode
-     * @param modifiers
-     */
-    @Override
-    public void keyPressed(int keyCode, int scanCode, int modifiers)
-    {
-        if (typing)
-        {
-            switch (keyCode)
-            {
-                case GLFW.GLFW_KEY_ENTER ->
-                {
-                    config.setValue(new String(buffer));
-                    typing = false;
-                }
-                case GLFW.GLFW_KEY_BACKSPACE ->
-                {
-                    if (buffer.length != 0)
-                    {
-                        buffer = ArrayUtils.remove(buffer, buffer.length - 1);
-                    }
-                }
-                case GLFW.GLFW_KEY_ESCAPE ->
-                {
-                    buffer = config.getValue().toCharArray();
-                    typing = false;
-                }
+            if (ClickGuiModule.getInstance().getSounds()) {
+               Managers.SOUND.playSound(SoundManager.GUI_CLICK);
             }
-        }
-    }
+         }
+      } else {
+         this.endTyping();
+      }
+   }
 
-    @Override
-    public void charTyped(char character, int modifiers)
-    {
-        if (typing)
-        {
-            buffer = ArrayUtils.add(buffer, character);
-        }
-    }
+   @Override
+   public void mouseReleased(double mouseX, double mouseY, int button) {
+   }
 
-    public void endTyping()
-    {
-        this.typing = false;
-    }
+   @Override
+   public void keyPressed(int keyCode, int scanCode, int modifiers) {
+      if (this.typing) {
+         switch (keyCode) {
+            case 256:
+               this.buffer = this.config.getValue().toCharArray();
+               this.typing = false;
+               break;
+            case 257:
+               this.config.setValue(new String(this.buffer));
+               this.typing = false;
+            case 258:
+            default:
+               break;
+            case 259:
+               if (this.buffer.length != 0) {
+                  this.buffer = ArrayUtils.remove(this.buffer, this.buffer.length - 1);
+               }
+         }
+      }
+   }
 
-    public boolean isTyping()
-    {
-        return typing;
-    }
+   @Override
+   public void charTyped(char character, int modifiers) {
+      if (this.typing) {
+         this.buffer = ArrayUtils.add(this.buffer, character);
+      }
+   }
 
-    public String getInsertionPoint()
-    {
-        if (idleTimer.passed(250))
-        {
-            idling = !idling;
-            idleTimer.reset();
-        }
-        if (idling && typing)
-        {
-            return "_";
-        }
-        return "";
-    }
+   public void endTyping() {
+      this.typing = false;
+   }
+
+   public boolean isTyping() {
+      return this.typing;
+   }
+
+   public String getInsertionPoint() {
+      if (this.idleTimer.passed(250)) {
+         this.idling = !this.idling;
+         this.idleTimer.reset();
+      }
+
+      return this.idling && this.typing ? "_" : "";
+   }
 }

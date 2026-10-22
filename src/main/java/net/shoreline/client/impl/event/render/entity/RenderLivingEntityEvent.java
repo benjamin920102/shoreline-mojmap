@@ -7,87 +7,80 @@ import net.minecraft.world.entity.LivingEntity;
 import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
-/**
- * @author linus
- * @since 1.0
- */
 @Cancelable
-public class RenderLivingEntityEvent extends Event
-{
-    //
-    private final LivingEntity entity;
-    private final EntityModel<?> model;
-    private final PoseStack matrices;
-    private final VertexConsumer vertexConsumer;
-    private final int light;
-    private final int overlay;
-    private final float red, green, blue, alpha;
+public class RenderLivingEntityEvent extends Event {
+   private final LivingEntity entity;
+   private final EntityModel<?> model;
+   private final PoseStack matrices;
+   private final VertexConsumer vertexConsumer;
+   private final int light;
+   private final int overlay;
+   private final float red;
+   private final float green;
+   private final float blue;
+   private final float alpha;
 
-    public RenderLivingEntityEvent(LivingEntity entity, EntityModel<?> model,
-                                   PoseStack matrices,
-                                   VertexConsumer vertexConsumer,
-                                   int light, int overlay, float red,
-                                   float green, float blue, float alpha)
-    {
-        this.entity = entity;
-        this.model = model;
-        this.matrices = matrices;
-        this.vertexConsumer = vertexConsumer;
-        this.light = light;
-        this.overlay = overlay;
-        this.red = red;
-        this.green = green;
-        this.blue = blue;
-        this.alpha = alpha;
-    }
+   public RenderLivingEntityEvent(
+      LivingEntity entity,
+      EntityModel<?> model,
+      PoseStack matrices,
+      VertexConsumer vertexConsumer,
+      int light,
+      int overlay,
+      float red,
+      float green,
+      float blue,
+      float alpha
+   ) {
+      this.entity = entity;
+      this.model = model;
+      this.matrices = matrices;
+      this.vertexConsumer = vertexConsumer;
+      this.light = light;
+      this.overlay = overlay;
+      this.red = red;
+      this.green = green;
+      this.blue = blue;
+      this.alpha = alpha;
+   }
 
-    public LivingEntity getEntity()
-    {
-        return entity;
-    }
+   public LivingEntity getEntity() {
+      return this.entity;
+   }
 
-    public EntityModel<?> getModel()
-    {
-        return model;
-    }
+   public EntityModel<?> getModel() {
+      return this.model;
+   }
 
-    public PoseStack getMatrices()
-    {
-        return matrices;
-    }
+   public PoseStack getMatrices() {
+      return this.matrices;
+   }
 
-    public VertexConsumer getVertexConsumerProvider()
-    {
-        return vertexConsumer;
-    }
+   public VertexConsumer getVertexConsumerProvider() {
+      return this.vertexConsumer;
+   }
 
-    public int getLight()
-    {
-        return light;
-    }
+   public int getLight() {
+      return this.light;
+   }
 
-    public int getOverlay()
-    {
-        return overlay;
-    }
+   public int getOverlay() {
+      return this.overlay;
+   }
 
-    public float getRed()
-    {
-        return red;
-    }
+   public float getRed() {
+      return this.red;
+   }
 
-    public float getGreen()
-    {
-        return green;
-    }
+   public float getGreen() {
+      return this.green;
+   }
 
-    public float getBlue()
-    {
-        return blue;
-    }
+   public float getBlue() {
+      return this.blue;
+   }
 
-    public float getAlpha()
-    {
-        return alpha;
-    }
+   public float getAlpha() {
+      return this.alpha;
+   }
 }

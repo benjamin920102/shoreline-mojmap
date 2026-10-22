@@ -10,17 +10,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(UseOnContext.class)
-public final class MixinItemUsageContext implements Globals
-{
-    @Inject(method = "getItemInHand", at = @At("RETURN"), cancellable = true)
-    public void hookGetStack(final CallbackInfoReturnable<ItemStack> info)
-    {
-        ItemDesyncEvent itemDesyncEvent = new ItemDesyncEvent();
-        EventBus.INSTANCE.dispatch(itemDesyncEvent);
-        if (mc.player != null && info.getReturnValue().equals(mc.player.getMainHandItem()) && itemDesyncEvent.isCanceled())
-        {
-            info.setReturnValue(itemDesyncEvent.getServerItem());
-        }
-    }
+@Mixin({UseOnContext.class})
+public final class MixinItemUsageContext implements Globals {
+   @Inject(
+      method = {"getItemInHand()Lnet/minecraft/world/item/ItemStack;"},
+      at = {@At("RETURN")},
+      cancellable = true
+   )
+   public void hookGetStack(CallbackInfoReturnable<ItemStack> info) {
+      ItemDesyncEvent itemDesyncEvent = new ItemDesyncEvent();
+      EventBus.INSTANCE.dispatch(itemDesyncEvent);
+      if (mc.player != null && ((ItemStack)info.getReturnValue()).equals(mc.player.getMainHandItem()) && itemDesyncEvent.isCanceled()) {
+         info.setReturnValue(itemDesyncEvent.getServerItem());
+      }
+   }
 }

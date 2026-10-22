@@ -1,6 +1,10 @@
 package net.shoreline.client.impl.manager.world.tick;
 
 import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.NoSuchElementException;
+import java.util.Queue;
 import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import net.shoreline.client.impl.event.network.DisconnectEvent;
 import net.shoreline.client.impl.event.network.PacketEvent;
@@ -10,176 +14,101 @@ import net.shoreline.client.util.collection.EvictingQueue;
 import net.shoreline.eventbus.EventBus;
 import net.shoreline.eventbus.annotation.EventListener;
 
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.NoSuchElementException;
-import java.util.Queue;
+public class TickManager implements Globals {
+   private final Deque<Float> ticks = new EvictingQueue<>(20);
+   private long time;
+   private float clientTick = 1.0F;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class TickManager implements Globals
-{
+   public TickManager() {
+      EventBus.INSTANCE.subscribe(this);
+   }
 
-    private final Deque<Float> ticks = new EvictingQueue<>(20);
-    // The TPS tick handler.
-    //
-    private long time;
-    //
-    private float clientTick = 1.0f;
+   @EventListener
+   public void onDisconnect(DisconnectEvent event) {
+      this.ticks.clear();
+   }
 
-    /**
-     *
-     */
-    public TickManager()
-    {
-        EventBus.INSTANCE.subscribe(this);
-    }
+   @EventListener
+   public void onPacketInbound(PacketEvent.Inbound event) {
+      if (mc.player != null && mc.level != null) {
+         if (event.getPacket() instanceof ClientboundSetTimePacket) {
+            float last = 20000.0F / (float)(System.currentTimeMillis() - this.time);
+            this.ticks.addFirst(last);
+            this.time = System.currentTimeMillis();
+         }
+      }
+   }
 
-    @EventListener
-    public void onDisconnect(DisconnectEvent event)
-    {
-        ticks.clear();
-    }
+   public void setClientTick(float ticks) {
+      this.clientTick = ticks;
+   }
 
-    /**
-     * @param event
-     * @see ClientboundSetTimePacket
-     */
-    @EventListener
-    public void onPacketInbound(PacketEvent.Inbound event)
-    {
-        if (mc.player == null || mc.level == null)
-        {
-            return;
-        }
-        // ticks/actual
-        if (event.getPacket() instanceof ClientboundSetTimePacket)
-        {
-            float last = 20000.0f / (System.currentTimeMillis() - time);
-            ticks.addFirst(last);
-            time = System.currentTimeMillis();
-        }
-    }
+   @EventListener
+   public void onTickCounter(TickCounterEvent event) {
+      if (this.clientTick != 1.0F) {
+         event.cancel();
+         event.setTicks(this.clientTick);
+      }
+   }
 
-    /**
-     * @param ticks
-     */
-    public void setClientTick(float ticks)
-    {
-        clientTick = ticks;
-    }
+   public Queue<Float> getTicks() {
+      return this.ticks;
+   }
 
-    /**
-     * @param event
-     */
-    @EventListener
-    public void onTickCounter(TickCounterEvent event)
-    {
-        if (clientTick != 1.0f)
-        {
-            event.cancel();
-            event.setTicks(clientTick);
-        }
-    }
+   public float getTpsAverage() {
+      float avg = 0.0F;
 
-    /**
-     * @return
-     */
-    public Queue<Float> getTicks()
-    {
-        return ticks;
-    }
-
-    // So many fucking issues with the EvictingQueue fuck stackoverflow
-    // Im just gonna try catch everything atp
-
-    /**
-     * @return
-     */
-    public float getTpsAverage()
-    {
-        float avg = 0.0f;
-        try
-        {
-            // fix ConcurrentModificationException
-            ArrayList<Float> ticksCopy = Lists.newArrayList(ticks);
-            if (!ticksCopy.isEmpty())
-            {
-                for (float t : ticksCopy)
-                {
-                    avg += t;
-                }
-                avg /= Math.max(ticksCopy.size(), 1.0f);
+      try {
+         ArrayList<Float> ticksCopy = Lists.newArrayList(this.ticks);
+         if (!ticksCopy.isEmpty()) {
+            for (float t : ticksCopy) {
+               avg += t;
             }
-        }
-        catch (NullPointerException e)
-        {
 
-        }
-        return Math.min(100.0f, avg); // Server may compensate
-    }
+            avg /= Math.max((float)ticksCopy.size(), 1.0F);
+         }
+      } catch (NullPointerException var5) {
+      }
 
-    /**
-     * @return
-     */
-    public float getTpsCurrent()
-    {
-        try
-        {
-            if (!ticks.isEmpty())
-            {
-                return Math.min(100.0f, ticks.getFirst());
+      return Math.min(100.0F, avg);
+   }
+
+   public float getTpsCurrent() {
+      try {
+         if (!this.ticks.isEmpty()) {
+            return Math.min(100.0F, this.ticks.getFirst());
+         }
+      } catch (NoSuchElementException var2) {
+      }
+
+      return 20.0F;
+   }
+
+   public float getTpsMin() {
+      float min = 20.0F;
+
+      try {
+         for (float t : this.ticks) {
+            if (t < min) {
+               min = t;
             }
-        }
-        catch (NoSuchElementException ignored)
-        {
+         }
+      } catch (NullPointerException var4) {
+      }
 
-        }
-        return 20.0f;
-    }
+      return min;
+   }
 
-    /**
-     * @return
-     */
-    public float getTpsMin()
-    {
-        float min = 20.0f;
-        try
-        {
-            for (float t : ticks)
-            {
-                if (t < min)
-                {
-                    min = t;
-                }
-            }
-        }
-        catch (NullPointerException e)
-        {
+   public boolean isTicksFilled() {
+      return this.ticks.size() >= 20;
+   }
 
-        }
-        return min;
-    }
-
-    public boolean isTicksFilled()
-    {
-        return ticks.size() >= 20;
-    }
-
-    /**
-     * @param tps
-     * @return
-     */
-    public float getTickSync(TickSync tps)
-    {
-        return switch (tps)
-        {
-            case AVERAGE -> getTpsAverage();
-            case CURRENT -> getTpsCurrent();
-            case MINIMAL -> getTpsMin();
-            case NONE -> 20.0f;
-        };
-    }
+   public float getTickSync(TickSync tps) {
+      return switch (tps) {
+         case AVERAGE -> this.getTpsAverage();
+         case CURRENT -> this.getTpsCurrent();
+         case MINIMAL -> this.getTpsMin();
+         case NONE -> 20.0F;
+      };
+   }
 }

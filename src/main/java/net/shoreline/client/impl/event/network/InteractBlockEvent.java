@@ -7,38 +7,26 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class InteractBlockEvent extends Event
-{
-    //
-    private final LocalPlayer player;
-    private final InteractionHand hand;
-    private final BlockHitResult hitResult;
+public class InteractBlockEvent extends Event {
+   private final LocalPlayer player;
+   private final InteractionHand hand;
+   private final BlockHitResult hitResult;
 
-    /**
-     * @param player
-     * @param hand
-     * @param hitResult
-     */
-    public InteractBlockEvent(LocalPlayer player, InteractionHand hand,
-                              BlockHitResult hitResult)
-    {
-        this.player = player;
-        this.hand = hand;
-        this.hitResult = hitResult;
-    }
+   public InteractBlockEvent(LocalPlayer player, InteractionHand hand, BlockHitResult hitResult) {
+      this.player = player;
+      this.hand = hand;
+      this.hitResult = hitResult;
+   }
 
-    public LocalPlayer getPlayer()
-    {
-        return player;
-    }
+   public LocalPlayer getPlayer() {
+      return this.player;
+   }
 
-    public InteractionHand getHand()
-    {
-        return hand;
-    }
+   public InteractionHand getHand() {
+      return this.hand;
+   }
 
-    public BlockHitResult getHitResult()
-    {
-        return hitResult;
-    }
+   public BlockHitResult getHitResult() {
+      return this.hitResult;
+   }
 }

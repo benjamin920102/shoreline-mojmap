@@ -13,80 +13,62 @@ import net.shoreline.client.impl.event.render.LightmapGammaEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 import net.shoreline.eventbus.event.StageEvent;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class FullbrightModule extends ToggleModule
-{
-    Config<Brightness> brightnessConfig = register(new EnumConfig<>("Mode", "Mode for world brightness", Brightness.GAMMA, Brightness.values()));
+public class FullbrightModule extends ToggleModule {
+   Config<FullbrightModule.Brightness> brightnessConfig = this.register(
+      new EnumConfig<>("Mode", "Mode for world brightness", FullbrightModule.Brightness.GAMMA, FullbrightModule.Brightness.values())
+   );
 
-    public FullbrightModule()
-    {
-        super("Fullbright", "Brightens the world", ModuleCategory.RENDER);
-    }
+   public FullbrightModule() {
+      super("Fullbright", "Brightens the world", ModuleCategory.RENDER);
+   }
 
-    @Override
-    public void onEnable()
-    {
-        if (mc.player != null && mc.level != null
-                && brightnessConfig.getValue() == Brightness.POTION)
-        {
-            mc.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, -1, 0)); // INFINITE
-        }
-    }
+   @Override
+   public void onEnable() {
+      if (mc.player != null && mc.level != null && this.brightnessConfig.getValue() == FullbrightModule.Brightness.POTION) {
+         mc.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, -1, 0));
+      }
+   }
 
-    @Override
-    public void onDisable()
-    {
-        if (mc.player != null && mc.level != null
-                && brightnessConfig.getValue() == Brightness.POTION)
-        {
-            mc.player.removeEffect(MobEffects.NIGHT_VISION);
-        }
-    }
+   @Override
+   public void onDisable() {
+      if (mc.player != null && mc.level != null && this.brightnessConfig.getValue() == FullbrightModule.Brightness.POTION) {
+         mc.player.removeEffect(MobEffects.NIGHT_VISION);
+      }
+   }
 
-    @EventListener
-    public void onGameJoin(GameJoinEvent event)
-    {
-        onDisable();
-        onEnable();
-    }
+   @EventListener
+   public void onGameJoin(GameJoinEvent event) {
+      this.onDisable();
+      this.onEnable();
+   }
 
-    @EventListener
-    public void onLightmapGamma(LightmapGammaEvent event)
-    {
-        if (brightnessConfig.getValue() == Brightness.GAMMA)
-        {
-            event.cancel();
-            event.setGamma(0xffffffff);
-        }
-    }
+   @EventListener
+   public void onLightmapGamma(LightmapGammaEvent event) {
+      if (this.brightnessConfig.getValue() == FullbrightModule.Brightness.GAMMA) {
+         event.cancel();
+         event.setGamma(-1);
+      }
+   }
 
-    @EventListener
-    public void onConfigUpdate(ConfigUpdateEvent event)
-    {
-        if (mc.player != null && brightnessConfig == event.getConfig()
-                && event.getStage() == StageEvent.EventStage.POST
-                && brightnessConfig.getValue() != Brightness.POTION)
-        {
-            mc.player.removeEffect(MobEffects.NIGHT_VISION);
-        }
-    }
+   @EventListener
+   public void onConfigUpdate(ConfigUpdateEvent event) {
+      if (mc.player != null
+         && this.brightnessConfig == event.getConfig()
+         && event.getStage() == StageEvent.EventStage.POST
+         && this.brightnessConfig.getValue() != FullbrightModule.Brightness.POTION) {
+         mc.player.removeEffect(MobEffects.NIGHT_VISION);
+      }
+   }
 
-    @EventListener
-    public void onTick(TickEvent event)
-    {
-        if (brightnessConfig.getValue() == Brightness.POTION
-                && !mc.player.hasEffect(MobEffects.NIGHT_VISION))
-        {
-            mc.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, -1, 0));
-        }
-    }
+   @EventListener
+   public void onTick(TickEvent event) {
+      if (this.brightnessConfig.getValue() == FullbrightModule.Brightness.POTION && !mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
+         mc.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, -1, 0));
+      }
+   }
 
-    public enum Brightness
-    {
-        GAMMA,
-        POTION
-    }
+   public static enum Brightness {
+      GAMMA,
+      POTION;
+   }
 }

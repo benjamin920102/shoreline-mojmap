@@ -6,6 +6,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket.Action;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffects;
@@ -30,444 +31,390 @@ import net.shoreline.client.impl.event.entity.player.TravelEvent;
 import net.shoreline.client.impl.event.network.PacketEvent;
 import net.shoreline.client.impl.event.network.PlayerTickEvent;
 import net.shoreline.client.impl.module.RotationModule;
-import net.shoreline.client.impl.module.client.AnticheatModule;
 import net.shoreline.client.init.Managers;
 import net.shoreline.client.mixin.accessor.AccessorFireworkRocketEntity;
 import net.shoreline.client.util.chat.ChatUtil;
 import net.shoreline.client.util.player.MovementUtil;
-import net.shoreline.client.util.player.PlayerUtil;
 import net.shoreline.client.util.player.RotationUtil;
 import net.shoreline.client.util.string.EnumFormatter;
 import net.shoreline.eventbus.annotation.EventListener;
 import net.shoreline.eventbus.event.StageEvent;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class ElytraFlyModule extends RotationModule
-{
-    private static ElytraFlyModule INSTANCE;
+public class ElytraFlyModule extends RotationModule {
+   private static ElytraFlyModule INSTANCE;
+   Config<ElytraFlyModule.FlyMode> modeConfig = this.register(
+      new EnumConfig<>("Mode", "The mode for elytra flight", ElytraFlyModule.FlyMode.CONTROL, ElytraFlyModule.FlyMode.values())
+   );
+   Config<Float> speedConfig = this.register(
+      new NumberConfig<>(
+         "Speed",
+         "The horizontal flight speed",
+         0.1F,
+         2.5F,
+         10.0F,
+         () -> this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOOST && this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOUNCE
+      )
+   );
+   Config<Float> vspeedConfig = this.register(
+      new NumberConfig<>(
+         "VerticalSpeed",
+         "The vertical flight speed",
+         0.1F,
+         1.0F,
+         5.0F,
+         () -> this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOOST && this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOUNCE
+      )
+   );
+   Config<Boolean> accelerateConfig = this.register(
+      new BooleanConfig(
+         "Accelerate",
+         "Accelerates fly speed",
+         false,
+         () -> this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOOST && this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOUNCE
+      )
+   );
+   Config<Float> accelSpeedConfig = this.register(
+      new NumberConfig<>(
+         "AccelSpeed",
+         "Acceleration speed",
+         0.01F,
+         0.1F,
+         1.0F,
+         () -> this.accelerateConfig.getValue()
+            && this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOOST
+            && this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOUNCE
+      )
+   );
+   Config<Float> maxSpeedConfig = this.register(
+      new NumberConfig<>(
+         "MaxSpeed",
+         "The maximum flight speed",
+         0.1F,
+         3.5F,
+         10.0F,
+         () -> this.accelerateConfig.getValue()
+            && this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOOST
+            && this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOUNCE
+      )
+   );
+   Config<Boolean> boostConfig = this.register(
+      new BooleanConfig("VanillaBoost", "Uses vanilla boost speed", false, () -> this.modeConfig.getValue() != ElytraFlyModule.FlyMode.BOOST)
+   );
+   Config<Boolean> rotateConfig = this.register(
+      new BooleanConfig("Rotate", "Rotates the player when moving", false, () -> this.modeConfig.getValue() == ElytraFlyModule.FlyMode.CONTROL)
+   );
+   Config<Boolean> fireworkConfig = this.register(
+      new BooleanConfig("Fireworks", "Uses fireworks when flying", false, () -> this.modeConfig.getValue() == ElytraFlyModule.FlyMode.CONTROL)
+   );
+   Config<Float> pitchConfig = this.register(
+      new NumberConfig<>("Pitch", "The pitch angle of bounce", 70.0F, 80.0F, 90.0F, () -> this.modeConfig.getValue() == ElytraFlyModule.FlyMode.BOUNCE)
+   );
+   Config<Boolean> obstaclePasserConfig = new BooleanConfig(
+      "ObstaclePasser", "Passes obstacles and resets fly using Baritone", this.modeConfig.getValue() == ElytraFlyModule.FlyMode.BOUNCE
+   );
+   private static final double GRIM_AIR_FRICTION = 0.0264444413;
+   private boolean resetSpeed;
+   private float speed;
+   private float cameraPitch;
 
-    Config<FlyMode> modeConfig = register(new EnumConfig<>("Mode", "The mode for elytra flight", FlyMode.CONTROL, FlyMode.values()));
-    // Speeds
-    Config<Float> speedConfig = register(new NumberConfig<>("Speed", "The horizontal flight speed", 0.1f, 2.5f, 10.0f, () -> modeConfig.getValue() != FlyMode.BOOST && modeConfig.getValue() != FlyMode.BOUNCE));
-    Config<Float> vspeedConfig = register(new NumberConfig<>("VerticalSpeed", "The vertical flight speed", 0.1f, 1.0f, 5.0f, () -> modeConfig.getValue() != FlyMode.BOOST && modeConfig.getValue() != FlyMode.BOUNCE));
-    Config<Boolean> accelerateConfig = register(new BooleanConfig("Accelerate", "Accelerates fly speed", false, () -> modeConfig.getValue() != FlyMode.BOOST && modeConfig.getValue() != FlyMode.BOUNCE));
-    Config<Float> accelSpeedConfig = register(new NumberConfig<>("AccelSpeed", "Acceleration speed", 0.01f, 0.1f, 1.00f, () -> accelerateConfig.getValue() && modeConfig.getValue() != FlyMode.BOOST && modeConfig.getValue() != FlyMode.BOUNCE));
-    Config<Float> maxSpeedConfig = register(new NumberConfig<>("MaxSpeed", "The maximum flight speed", 0.1f, 3.5f, 10.0f, () -> accelerateConfig.getValue() && modeConfig.getValue() != FlyMode.BOOST && modeConfig.getValue() != FlyMode.BOUNCE));
-    Config<Boolean> boostConfig = register(new BooleanConfig("VanillaBoost", "Uses vanilla boost speed", false, () -> modeConfig.getValue() != FlyMode.BOOST));
-    // Control
-    Config<Boolean> rotateConfig = register(new BooleanConfig("Rotate", "Rotates the player when moving", false, () -> modeConfig.getValue() == FlyMode.CONTROL));
-    Config<Boolean> fireworkConfig = register(new BooleanConfig("Fireworks", "Uses fireworks when flying", false, () -> modeConfig.getValue() == FlyMode.CONTROL));
-    // Bounce
-    Config<Float> pitchConfig = register(new NumberConfig<>("Pitch", "The pitch angle of bounce", 70.0f, 80.0f, 90.0f, () -> modeConfig.getValue() == FlyMode.BOUNCE));
-    Config<Boolean> obstaclePasserConfig = new BooleanConfig("ObstaclePasser", "Passes obstacles and resets fly using Baritone", modeConfig.getValue() == FlyMode.BOUNCE);
+   public ElytraFlyModule() {
+      super("ElytraFly", "Allows you to fly freely using an elytra", ModuleCategory.MOVEMENT);
+      INSTANCE = this;
+      if (ShorelineMod.isBaritonePresent()) {
+         this.register(this.obstaclePasserConfig);
+      }
+   }
 
-    private final static double GRIM_AIR_FRICTION = 0.0264444413;
+   public static ElytraFlyModule getInstance() {
+      return INSTANCE;
+   }
 
-    private boolean resetSpeed;
-    private float speed;
+   @Override
+   public String getModuleData() {
+      return EnumFormatter.formatEnum(this.modeConfig.getValue());
+   }
 
-    private float cameraPitch;
+   @Override
+   public void onEnable() {
+      this.resetSpeed = true;
+   }
 
-    public ElytraFlyModule()
-    {
-        super("ElytraFly", "Allows you to fly freely using an elytra", ModuleCategory.MOVEMENT);
-        INSTANCE = this;
-        if (ShorelineMod.isBaritonePresent())
-        {
-            register(obstaclePasserConfig);
-        }
-    }
+   @Override
+   public void onDisable() {
+      if (ShorelineMod.isBaritonePresent()) {
+         BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().forceCancel();
+      }
+   }
 
-    public static ElytraFlyModule getInstance()
-    {
-        return INSTANCE;
-    }
+   @EventListener
+   public void onConfigUpdate(ConfigUpdateEvent event) {
+      if (event.getStage() == StageEvent.EventStage.POST && event.getConfig() == this.accelerateConfig && this.accelerateConfig.getValue()) {
+         this.resetSpeed = true;
+      }
+   }
 
-    @Override
-    public String getModuleData()
-    {
-        return EnumFormatter.formatEnum(modeConfig.getValue());
-    }
+   @EventListener
+   public void onPlayerTick(PlayerTickEvent event) {
+      if (!ShorelineMod.isBaritonePresent() || !BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing()) {
+         if (mc.player.isFallFlying()) {
+            if (ShorelineMod.isBaritonePresent() && this.obstaclePasserConfig.getValue()) {
+               if (!BaritoneAPI.getSettings().freeLook.value) {
+                  ChatUtil.clientSendMessage(ChatFormatting.RED + "Please enable FreeLook in Baritone to use ObstaclePasser!", 5005);
+                  return;
+               }
 
-    @Override
-    public void onEnable()
-    {
-        resetSpeed = true;
-    }
+               if (mc.player.horizontalCollision) {
+                  BlockPos goalBlockPos = null;
 
-    @Override
-    public void onDisable()
-    {
-        if (ShorelineMod.isBaritonePresent())
-        {
-            BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().forceCancel();
-        }
-    }
-
-    @EventListener
-    public void onConfigUpdate(ConfigUpdateEvent event)
-    {
-        if (event.getStage() == StageEvent.EventStage.POST &&
-                event.getConfig() == accelerateConfig && accelerateConfig.getValue())
-        {
-            resetSpeed = true;
-        }
-    }
-
-    @EventListener
-    public void onPlayerTick(PlayerTickEvent event)
-    {
-        if (ShorelineMod.isBaritonePresent() && BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing())
-        {
-            return;
-        }
-
-        if (!mc.player.isFallFlying())
-        {
-            return;
-        }
-
-        if (ShorelineMod.isBaritonePresent() && obstaclePasserConfig.getValue())
-        {
-            if (!BaritoneAPI.getSettings().freeLook.value)
-            {
-                ChatUtil.clientSendMessage(ChatFormatting.RED + "Please enable FreeLook in Baritone to use ObstaclePasser!", 5005);
-                return;
-            }
-            if (mc.player.horizontalCollision)
-            {
-                BlockPos goalBlockPos = null;
-                for (int i = 3; i < 64; i++)
-                {
-                    Vec3 position = mc.player.position();
-                    Vec3 vec3d2 = RotationUtil.getRotationVector(0.0f, mc.player.getYRot());
-                    Vec3 vec3d3 = position.add(vec3d2.x * i, 0.0, vec3d2.z * i);
-                    BlockPos blockPos = BlockPos.containing(vec3d3);
-                    if (mc.level.getBlockState(blockPos).isAir() && mc.level.getBlockState(blockPos.above()).isAir())
-                    {
+                  for (int i = 3; i < 64; i++) {
+                     Vec3 position = mc.player.position();
+                     Vec3 vec3d2 = RotationUtil.getRotationVector(0.0F, mc.player.getYRot());
+                     Vec3 vec3d3 = position.add(vec3d2.x * i, 0.0, vec3d2.z * i);
+                     BlockPos blockPos = BlockPos.containing(vec3d3);
+                     if (mc.level.getBlockState(blockPos).isAir() && mc.level.getBlockState(blockPos.above()).isAir()) {
                         goalBlockPos = blockPos;
                         break;
-                    }
-                }
-                if (goalBlockPos != null)
-                {
-                    BaritoneAPI.getProvider().getPrimaryBaritone().getCustomGoalProcess()
-                            .setGoalAndPath(new GoalBlock(goalBlockPos.getX(), goalBlockPos.getY(), goalBlockPos.getZ()));
-                }
+                     }
+                  }
+
+                  if (goalBlockPos != null) {
+                     BaritoneAPI.getProvider()
+                        .getPrimaryBaritone()
+                        .getCustomGoalProcess()
+                        .setGoalAndPath(new GoalBlock(goalBlockPos.getX(), goalBlockPos.getY(), goalBlockPos.getZ()));
+                  }
+               }
             }
-        }
 
-        if (modeConfig.getValue() == FlyMode.CONTROL && rotateConfig.getValue())
-        {
-            float yaw = SprintModule.getInstance().getSprintYaw(mc.player.getYRot());
-            setRotation(yaw, getControlPitch());
+            if (this.modeConfig.getValue() == ElytraFlyModule.FlyMode.CONTROL && this.rotateConfig.getValue()) {
+               float yaw = SprintModule.getInstance().getSprintYaw(mc.player.getYRot());
+               this.setRotation(yaw, this.getControlPitch());
+               int fireworkSlot = -1;
 
-            int fireworkSlot = -1;
-            for (int i = 0; i < 36; i++)
-            {
-                ItemStack stack = mc.player.getInventory().getItem(i);
-                if (stack.getItem() instanceof FireworkRocketItem)
-                {
-                    fireworkSlot = i;
-                    break;
-                }
+               for (int ix = 0; ix < 36; ix++) {
+                  ItemStack stack = mc.player.getInventory().getItem(ix);
+                  if (stack.getItem() instanceof FireworkRocketItem) {
+                     fireworkSlot = ix;
+                     break;
+                  }
+               }
+
+               if (this.fireworkConfig.getValue() && fireworkSlot != -1) {
+                  if (fireworkSlot < 9) {
+                     Managers.INVENTORY.setSlot(fireworkSlot);
+                     mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+                     Managers.INVENTORY.syncToClient();
+                  } else {
+                     mc.gameMode.handleInventoryMouseClick(0, fireworkSlot, 0, ClickType.PICKUP, mc.player);
+                     mc.gameMode.handleInventoryMouseClick(0, mc.player.getInventory().selected + 36, 0, ClickType.PICKUP, mc.player);
+                     mc.gameMode.handleInventoryMouseClick(0, fireworkSlot, 0, ClickType.PICKUP, mc.player);
+                     mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+                     mc.gameMode.handleInventoryMouseClick(0, fireworkSlot, 0, ClickType.PICKUP, mc.player);
+                     mc.gameMode.handleInventoryMouseClick(0, mc.player.getInventory().selected + 36, 0, ClickType.PICKUP, mc.player);
+                     mc.gameMode.handleInventoryMouseClick(0, fireworkSlot, 0, ClickType.PICKUP, mc.player);
+                  }
+               }
+            } else if (this.modeConfig.getValue() == ElytraFlyModule.FlyMode.BOUNCE) {
+               if (this.canSprint()) {
+                  mc.player.setSprinting(true);
+               }
+
+               mc.player.setXRot(this.pitchConfig.getValue());
+               this.setRotation(mc.player.getYRot(), this.pitchConfig.getValue());
             }
-            if (fireworkConfig.getValue() && fireworkSlot != -1)
-            {
-                if (fireworkSlot < 9)
-                {
-                    Managers.INVENTORY.setSlot(fireworkSlot);
-                    mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
-                    Managers.INVENTORY.syncToClient();
-                }
-                else
-                {
-                    mc.gameMode.handleInventoryMouseClick(0, fireworkSlot, 0, ClickType.PICKUP, mc.player);
-                    mc.gameMode.handleInventoryMouseClick(0, mc.player.getInventory().selected + 36, 0, ClickType.PICKUP, mc.player);
-                    mc.gameMode.handleInventoryMouseClick(0, fireworkSlot, 0, ClickType.PICKUP, mc.player);
-                    mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
-                    mc.gameMode.handleInventoryMouseClick(0, fireworkSlot, 0, ClickType.PICKUP, mc.player);
-                    mc.gameMode.handleInventoryMouseClick(0, mc.player.getInventory().selected + 36, 0, ClickType.PICKUP, mc.player);
-                    mc.gameMode.handleInventoryMouseClick(0, fireworkSlot, 0, ClickType.PICKUP, mc.player);
-                }
+         }
+      }
+   }
+
+   @EventListener
+   public void onPlayerMove(PlayerMoveEvent event) {
+      if (!ShorelineMod.isBaritonePresent() || !BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing()) {
+         if (mc.player.isFallFlying() && !mc.player.isInWater() && !mc.player.isInLava() && !(mc.player.getFoodData().getFoodLevel() <= 6.0F)) {
+            if (this.modeConfig.getValue() == ElytraFlyModule.FlyMode.BOOST) {
+               boolean boost = mc.options.keyJump.isDown() || AutoWalkModule.getInstance().isEnabled();
+               if (boost) {
+                  this.applyVanillaBoost();
+               }
+            } else if (this.boostConfig.getValue()) {
+               this.applyVanillaBoost();
             }
-        }
-        else if (modeConfig.getValue() == FlyMode.BOUNCE)
-        {
-            if (canSprint())
-            {
-                mc.player.setSprinting(true);
+         }
+      }
+   }
+
+   @EventListener
+   public void onTravel(TravelEvent event) {
+      if (mc.player != null && mc.level != null) {
+         if (!ShorelineMod.isBaritonePresent() || !BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing()) {
+            if (!MovementUtil.isInputtingMovement() || mc.player.horizontalCollision) {
+               this.resetSpeed = true;
             }
-            mc.player.setXRot(pitchConfig.getValue());
-            setRotation(mc.player.getYRot(), pitchConfig.getValue());
-        }
-    }
 
-    @EventListener
-    public void onPlayerMove(PlayerMoveEvent event)
-    {
-        if (ShorelineMod.isBaritonePresent() && BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing())
-        {
-            return;
-        }
+            if (this.accelerateConfig.getValue()) {
+               if (this.resetSpeed) {
+                  this.speed = 0.1F;
+                  this.resetSpeed = false;
+               }
 
-        if (!mc.player.isFallFlying() || mc.player.isInWater()
-                || mc.player.isInLava() || mc.player.getFoodData().getFoodLevel() <= 6.0f)
-        {
-            return;
-        }
+               if (this.speed < this.maxSpeedConfig.getValue()) {
+                  this.speed = this.speed + this.accelSpeedConfig.getValue();
+               }
 
-        if (modeConfig.getValue() == FlyMode.BOOST)
-        {
-            boolean boost = (mc.options.keyJump.isDown() || AutoWalkModule.getInstance().isEnabled());
-            if (boost)
-            {
-                applyVanillaBoost();
+               if (this.speed - this.accelSpeedConfig.getValue() > this.maxSpeedConfig.getValue()) {
+                  this.speed = this.speed - this.accelSpeedConfig.getValue();
+               }
+            } else {
+               this.speed = this.speedConfig.getValue();
             }
-        }
-        else if (boostConfig.getValue())
-        {
-            applyVanillaBoost();
-        }
-    }
 
-    @EventListener
-    public void onTravel(TravelEvent event)
-    {
-        if (mc.player == null || mc.level == null)
-        {
-            return;
-        }
+            switch ((ElytraFlyModule.FlyMode)this.modeConfig.getValue()) {
+               case CONTROL:
+                  if (!mc.player.isFallFlying()) {
+                     return;
+                  }
 
-        if (ShorelineMod.isBaritonePresent() && BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing())
-        {
-            return;
-        }
+                  event.cancel();
+                  float forward = mc.player.input.forwardImpulse;
+                  float side = mc.player.input.leftImpulse;
+                  float yaw = Managers.ROTATION.isRotating() ? Managers.ROTATION.getRotationYaw() : mc.player.getYRot();
+                  if (forward != 0.0F) {
+                     if (side > 0.0F) {
+                        yaw += forward > 0.0F ? -45.0F : 45.0F;
+                     } else if (side < 0.0F) {
+                        yaw += forward > 0.0F ? 45.0F : -45.0F;
+                     }
 
-        if (!MovementUtil.isInputtingMovement() || mc.player.horizontalCollision)
-        {
-            resetSpeed = true;
-        }
+                     side = 0.0F;
+                     if (forward > 0.0F) {
+                        forward = 1.0F;
+                     } else if (forward < 0.0F) {
+                        forward = -1.0F;
+                     }
+                  }
 
-        if (accelerateConfig.getValue())
-        {
-            if (resetSpeed)
-            {
-                speed = 0.1f;
-                resetSpeed = false;
+                  double sin = Math.sin(Math.toRadians(yaw + 90.0F));
+                  double cos = Math.cos(Math.toRadians(yaw + 90.0F));
+                  double rx = forward * this.speed * cos + side * this.speed * sin;
+                  double rz = forward * this.speed * sin - side * this.speed * cos;
+                  if (forward == 0.0F && side == 0.0F) {
+                     Managers.MOVEMENT.setMotionXZ(0.0, 0.0);
+                  } else {
+                     Managers.MOVEMENT.setMotionXZ(rx, rz);
+                  }
+
+                  Managers.MOVEMENT.setMotionY(0.0);
+                  if (mc.options.keyJump.isDown()) {
+                     Managers.MOVEMENT.setMotionY(this.vspeedConfig.getValue().floatValue());
+                  } else if (mc.options.keyShift.isDown()) {
+                     Managers.MOVEMENT.setMotionY(-this.vspeedConfig.getValue());
+                  }
+                  break;
+               case BOUNCE:
+                  if (!mc.player.getInventory().getArmor(2).getItem().equals(Items.ELYTRA)) {
+                     return;
+                  }
+
+                  if (!mc.player.isFallFlying()) {
+                     Managers.NETWORK.sendPacket(new ServerboundPlayerCommandPacket(mc.player, Action.START_FALL_FLYING));
+                     mc.player.startFallFlying();
+                  }
+
+                  if (mc.player.onGround()) {
+                     mc.player.jumpFromGround();
+                  }
             }
-            if (speed < maxSpeedConfig.getValue())
-            {
-                speed += accelSpeedConfig.getValue();
-            }
-            if (speed - accelSpeedConfig.getValue() > maxSpeedConfig.getValue())
-            {
-                speed -= accelSpeedConfig.getValue();
-            }
-        }
-        else
-        {
-            speed = speedConfig.getValue();
-        }
+         }
+      }
+   }
 
-        switch (modeConfig.getValue())
-        {
-            case CONTROL ->
-            {
-                if (!mc.player.isFallFlying())
-                {
-                    return;
-                }
-                event.cancel();
-                float forward = mc.player.input.forwardImpulse;
-                float side = mc.player.input.leftImpulse;
-                float yaw = Managers.ROTATION.isRotating() ? Managers.ROTATION.getRotationYaw() : mc.player.getYRot();
-                if (forward != 0.0f)
-                {
-                    if (side > 0.0f)
-                    {
-                        yaw += forward > 0.0f ? -45.0f : 45.0f;
-                    }
-                    else if (side < 0.0f)
-                    {
-                        yaw += forward > 0.0f ? 45.0f : -45.0f;
-                    }
-                    side = 0.0f;
-                    if (forward > 0.0f)
-                    {
-                        forward = 1.0f;
-                    }
-                    else if (forward < 0.0f)
-                    {
-                        forward = -1.0f;
-                    }
-                }
-                final double sin = Math.sin(Math.toRadians(yaw + 90.0f));
-                final double cos = Math.cos(Math.toRadians(yaw + 90.0f));
-                final double rx = forward * speed * cos + side * speed * sin;
-                final double rz = forward * speed * sin - side * speed * cos;
-                if (forward == 0.0f && side == 0.0f)
-                {
-                    Managers.MOVEMENT.setMotionXZ(0.0, 0.0);
-                }
-                else
-                {
-                    Managers.MOVEMENT.setMotionXZ(rx, rz);
-                }
-                Managers.MOVEMENT.setMotionY(0.0);
-                if (mc.options.keyJump.isDown())
-                {
-                    Managers.MOVEMENT.setMotionY(vspeedConfig.getValue());
-                }
-                else if (mc.options.keyShift.isDown())
-                {
-                    Managers.MOVEMENT.setMotionY(-vspeedConfig.getValue());
-                }
-            }
-            case BOUNCE ->
-            {
-                if (!mc.player.getInventory().getArmor(2).getItem().equals(Items.ELYTRA))
-                {
-                    return;
-                }
+   @EventListener
+   public void onPacketInbound(PacketEvent.Inbound event) {
+      if (mc.player != null && (!ShorelineMod.isBaritonePresent() || !BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing())) {
+         if (event.getPacket() instanceof ClientboundPlayerPositionPacket) {
+            this.resetSpeed = true;
+         }
+      }
+   }
 
-                if (!mc.player.isFallFlying())
-                {
-                    Managers.NETWORK.sendPacket(new ServerboundPlayerCommandPacket(mc.player, ServerboundPlayerCommandPacket.Action.START_FALL_FLYING));
-                    mc.player.startFallFlying();
-                }
-                if (mc.player.onGround())
-                {
-                    mc.player.jumpFromGround();
-                }
-            }
-        }
-    }
-
-    @EventListener
-    public void onPacketInbound(PacketEvent.Inbound event)
-    {
-        if (mc.player == null || ShorelineMod.isBaritonePresent() && BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing())
-        {
-            return;
-        }
-
-        if (event.getPacket() instanceof ClientboundPlayerPositionPacket)
-        {
-            resetSpeed = true;
-        }
-    }
-
-    @EventListener
-    public void onCameraRotation(CameraRotationEvent event)
-    {
-        if (ShorelineMod.isBaritonePresent() && BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing())
-        {
-            return;
-        }
-
-        if (modeConfig.getValue() == FlyMode.BOUNCE)
-        {
+   @EventListener
+   public void onCameraRotation(CameraRotationEvent event) {
+      if (!ShorelineMod.isBaritonePresent() || !BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing()) {
+         if (this.modeConfig.getValue() == ElytraFlyModule.FlyMode.BOUNCE) {
             event.setYaw(event.getYaw());
-            event.setPitch(cameraPitch);
-        }
-    }
+            event.setPitch(this.cameraPitch);
+         }
+      }
+   }
 
-    @EventListener
-    public void onMouseUpdate(MouseUpdateEvent event)
-    {
-        if (ShorelineMod.isBaritonePresent() && BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing())
-        {
-            return;
-        }
-
-        if (modeConfig.getValue() == FlyMode.BOUNCE)
-        {
+   @EventListener
+   public void onMouseUpdate(MouseUpdateEvent event) {
+      if (!ShorelineMod.isBaritonePresent() || !BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing()) {
+         if (this.modeConfig.getValue() == ElytraFlyModule.FlyMode.BOUNCE) {
             event.cancel();
-            float f = (float) event.getCursorDeltaY() * 0.15F;
-            float g = (float) event.getCursorDeltaX() * 0.15F;
+            float f = (float)event.getCursorDeltaY() * 0.15F;
+            float g = (float)event.getCursorDeltaX() * 0.15F;
             this.cameraPitch += f;
             mc.player.setYRot(mc.player.getYRot() + g);
-            this.cameraPitch = Mth.clamp(cameraPitch, -90.0F, 90.0F);
-        }
-    }
+            this.cameraPitch = Mth.clamp(this.cameraPitch, -90.0F, 90.0F);
+         }
+      }
+   }
 
-    public float getControlPitch()
-    {
-        if (isBoostedByRocket())
-        {
-            if (mc.options.keyJump.isDown() && !mc.options.keyShift.isDown())
-            {
-                return MovementUtil.isMoving() ? -50.0f : -90.0f;
-            }
-            else if (mc.options.keyShift.isDown() && !mc.options.keyJump.isDown())
-            {
-                return MovementUtil.isMoving() ? 50.0f : 90.0f;
-            }
-            return 0.0f;
-        }
-        else
-        {
-            if (mc.options.keyJump.isDown() && !mc.options.keyShift.isDown())
-            {
-                return -50.0f;
-            }
-            else if (mc.options.keyShift.isDown() && !mc.options.keyJump.isDown())
-            {
-                return 50.0f;
-            }
-            return 0.1f;
-        }
-    }
+   public float getControlPitch() {
+      if (this.isBoostedByRocket()) {
+         if (mc.options.keyJump.isDown() && !mc.options.keyShift.isDown()) {
+            return MovementUtil.isMoving() ? -50.0F : -90.0F;
+         } else if (mc.options.keyShift.isDown() && !mc.options.keyJump.isDown()) {
+            return MovementUtil.isMoving() ? 50.0F : 90.0F;
+         } else {
+            return 0.0F;
+         }
+      } else if (mc.options.keyJump.isDown() && !mc.options.keyShift.isDown()) {
+         return -50.0F;
+      } else {
+         return mc.options.keyShift.isDown() && !mc.options.keyJump.isDown() ? 50.0F : 0.1F;
+      }
+   }
 
-    public void applyVanillaBoost()
-    {
-        float yaw = Managers.ROTATION.isRotating() ? Managers.ROTATION.getRotationYaw() : mc.player.getYRot();
-        final double x = GRIM_AIR_FRICTION * Math.cos(Math.toRadians(yaw + 90.0f));
-        final double z = GRIM_AIR_FRICTION * Math.sin(Math.toRadians(yaw + 90.0f));
-        double motionX = mc.player.getDeltaMovement().x + x;
-        double motionZ = mc.player.getDeltaMovement().z + z;
-        mc.player.setDeltaMovement(motionX, mc.player.getDeltaMovement().y, motionZ);
-    }
+   public void applyVanillaBoost() {
+      float yaw = Managers.ROTATION.isRotating() ? Managers.ROTATION.getRotationYaw() : mc.player.getYRot();
+      double x = 0.0264444413 * Math.cos(Math.toRadians(yaw + 90.0F));
+      double z = 0.0264444413 * Math.sin(Math.toRadians(yaw + 90.0F));
+      double motionX = mc.player.getDeltaMovement().x + x;
+      double motionZ = mc.player.getDeltaMovement().z + z;
+      mc.player.setDeltaMovement(motionX, mc.player.getDeltaMovement().y, motionZ);
+   }
 
-    private boolean isBoostedByRocket()
-    {
-        for (Entity entity : mc.level.entitiesForRendering())
-        {
-            if (entity instanceof FireworkRocketEntity rocket
-                    && ((AccessorFireworkRocketEntity) rocket).hookWasShotByEntity()
-                    && ((AccessorFireworkRocketEntity) rocket).hookGetShooter() == mc.player)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
+   private boolean isBoostedByRocket() {
+      for (Entity entity : mc.level.entitiesForRendering()) {
+         if (entity instanceof FireworkRocketEntity rocket
+            && ((AccessorFireworkRocketEntity)rocket).hookWasShotByEntity()
+            && ((AccessorFireworkRocketEntity)rocket).hookGetShooter() == mc.player) {
+            return true;
+         }
+      }
 
-    private boolean canSprint()
-    {
-        return !mc.player.isShiftKeyDown() && !mc.player.isHandsBusy()
-                && !mc.player.isFallFlying()
-                && !mc.player.isInWater()
-                && !mc.player.isInLava()
-                && !mc.player.isSuppressingSlidingDownLadder()
-                && !mc.player.hasEffect(MobEffects.BLINDNESS)
-                && mc.player.getFoodData().getFoodLevel() > 6.0F;
-    }
+      return false;
+   }
 
-    public boolean isBounce()
-    {
-        return modeConfig.getValue() == FlyMode.BOUNCE;
-    }
+   private boolean canSprint() {
+      return !mc.player.isShiftKeyDown()
+         && !mc.player.isHandsBusy()
+         && !mc.player.isFallFlying()
+         && !mc.player.isInWater()
+         && !mc.player.isInLava()
+         && !mc.player.isSuppressingSlidingDownLadder()
+         && !mc.player.hasEffect(MobEffects.BLINDNESS)
+         && mc.player.getFoodData().getFoodLevel() > 6.0F;
+   }
 
-    public enum FlyMode
-    {
-        CONTROL,
-        BOOST,
-        BOUNCE,
-        // PACKET
-    }
+   public boolean isBounce() {
+      return this.modeConfig.getValue() == ElytraFlyModule.FlyMode.BOUNCE;
+   }
+
+   public static enum FlyMode {
+      CONTROL,
+      BOOST,
+      BOUNCE;
+   }
 }

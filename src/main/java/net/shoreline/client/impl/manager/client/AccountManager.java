@@ -1,5 +1,8 @@
 package net.shoreline.client.impl.manager.client;
 
+import java.nio.file.Path;
+import java.util.LinkedList;
+import java.util.List;
 import net.minecraft.client.User;
 import net.shoreline.client.Shoreline;
 import net.shoreline.client.api.account.config.AccountFile;
@@ -9,73 +12,42 @@ import net.shoreline.client.api.account.type.MinecraftAccount;
 import net.shoreline.client.mixin.accessor.AccessorMinecraftClient;
 import net.shoreline.client.util.Globals;
 
-import java.nio.file.Path;
-import java.util.LinkedList;
-import java.util.List;
+public final class AccountManager implements Globals {
+   public static final MSAAuthenticator MSA_AUTHENTICATOR = new MSAAuthenticator();
+   private final List<MinecraftAccount> accounts = new LinkedList<>();
+   private AccountFile configFile;
 
-/**
- * @author xgraza
- * @see MinecraftAccount
- * @since 03/31/24
- */
-public final class AccountManager implements Globals
-{
-    // The Microsoft authenticator
-    public static final MSAAuthenticator MSA_AUTHENTICATOR = new MSAAuthenticator();
-    private final List<MinecraftAccount> accounts = new LinkedList<>();
+   public void postInit() {
+      Path runDir = Shoreline.CONFIG.getClientDirectory();
+      if (runDir.resolve("accounts_enc.json").toFile().exists()) {
+         System.out.println("Encrypted account file exists");
+         this.configFile = new EncryptedAccountFile(runDir);
+      } else {
+         System.out.println("Normal account file");
+         this.configFile = new AccountFile(runDir);
+      }
 
-    private AccountFile configFile;
+      Shoreline.CONFIG.addFile(this.configFile);
+   }
 
-    public void postInit()
-    {
-        // Handle account file encryption
-        final Path runDir = Shoreline.CONFIG.getClientDirectory();
-        if (runDir.resolve("accounts_enc.json").toFile().exists())
-        {
-            System.out.println("Encrypted account file exists");
-            configFile = new EncryptedAccountFile(runDir);
-        }
-        else
-        {
-            System.out.println("Normal account file");
-            configFile = new AccountFile(runDir);
-        }
+   public void register(MinecraftAccount account) {
+      this.accounts.add(account);
+   }
 
-        Shoreline.CONFIG.addFile(configFile);
-    }
+   public void unregister(MinecraftAccount account) {
+      this.accounts.remove(account);
+   }
 
-    /**
-     * @param account
-     */
-    public void register(MinecraftAccount account)
-    {
-        accounts.add(account);
-    }
+   public void setSession(User session) {
+      ((AccessorMinecraftClient)mc).setSession(session);
+      Shoreline.info("Set session to {} ({})", session.getName(), session.getProfileId());
+   }
 
-    /**
-     * @param account
-     */
-    public void unregister(final MinecraftAccount account)
-    {
-        accounts.remove(account);
-    }
+   public List<MinecraftAccount> getAccounts() {
+      return this.accounts;
+   }
 
-    public void setSession(final User session)
-    {
-        ((AccessorMinecraftClient) mc).setSession(session);
-        Shoreline.info("Set session to {} ({})", session.getName(), session.getProfileId());
-    }
-
-    /**
-     * @return
-     */
-    public List<MinecraftAccount> getAccounts()
-    {
-        return accounts;
-    }
-
-    public boolean isEncrypted()
-    {
-        return configFile instanceof EncryptedAccountFile;
-    }
+   public boolean isEncrypted() {
+      return this.configFile instanceof EncryptedAccountFile;
+   }
 }

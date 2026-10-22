@@ -2,17 +2,6 @@ package net.shoreline.client.impl.gui.click.component;
 
 import net.minecraft.client.gui.GuiGraphics;
 
-/**
- * @author linus
- * @since 1.0
- */
-public interface Drawable
-{
-    /**
-     * @param context
-     * @param mouseX
-     * @param mouseY
-     * @param delta
-     */
-    void render(GuiGraphics context, float mouseX, float mouseY, float delta);
+public interface Drawable {
+   void render(GuiGraphics var1, float var2, float var3, float var4);
 }

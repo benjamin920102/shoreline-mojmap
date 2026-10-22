@@ -4,7 +4,5 @@ import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
 @Cancelable
-public class DecodePacketEvent extends Event
-{
-
+public class DecodePacketEvent extends Event {
 }

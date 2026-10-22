@@ -7,31 +7,18 @@ import net.shoreline.client.api.module.ToggleModule;
 import net.shoreline.client.impl.event.FramerateLimitEvent;
 import net.shoreline.eventbus.annotation.EventListener;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class UnfocusedFPSModule extends ToggleModule
-{
-    //
-    Config<Integer> limitConfig = register(new NumberConfig<>("Limit", "The FPS limit when game is in the background", 5, 30, 120));
+public class UnfocusedFPSModule extends ToggleModule {
+   Config<Integer> limitConfig = this.register(new NumberConfig<>("Limit", "The FPS limit when game is in the background", 5, 30, 120));
 
-    /**
-     *
-     */
-    public UnfocusedFPSModule()
-    {
-        super("UnfocusedFPS", "Reduces FPS when game is in the background",
-                ModuleCategory.MISCELLANEOUS);
-    }
+   public UnfocusedFPSModule() {
+      super("UnfocusedFPS", "Reduces FPS when game is in the background", ModuleCategory.MISCELLANEOUS);
+   }
 
-    @EventListener
-    public void onFramerateLimit(FramerateLimitEvent event)
-    {
-        if (!mc.isWindowActive())
-        {
-            event.cancel();
-            event.setFramerateLimit(limitConfig.getValue());
-        }
-    }
+   @EventListener
+   public void onFramerateLimit(FramerateLimitEvent event) {
+      if (!mc.isWindowActive()) {
+         event.cancel();
+         event.setFramerateLimit(this.limitConfig.getValue());
+      }
+   }
 }

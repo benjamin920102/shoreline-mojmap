@@ -14,100 +14,98 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * @author linus
- * @see PlayerRenderer
- * @since 1.0
- */
-@Mixin(PlayerRenderer.class)
-public class MixinPlayerEntityRenderer
-{
-    //
-    @Unique
-    private float yaw, prevYaw, bodyYaw, prevBodyYaw, headYaw, prevHeadYaw;
-    @Unique
-    private float pitch, prevPitch;
-    @Unique
-    private boolean prevSneaking;
-    @Unique
-    private boolean prevFallFlying;
+@Mixin({PlayerRenderer.class})
+public class MixinPlayerEntityRenderer {
+   @Unique
+   private float yaw;
+   @Unique
+   private float prevYaw;
+   @Unique
+   private float bodyYaw;
+   @Unique
+   private float prevBodyYaw;
+   @Unique
+   private float headYaw;
+   @Unique
+   private float prevHeadYaw;
+   @Unique
+   private float pitch;
+   @Unique
+   private float prevPitch;
+   @Unique
+   private boolean prevSneaking;
+   @Unique
+   private boolean prevFallFlying;
 
-    /**
-     * @param abstractClientPlayerEntity
-     * @param f
-     * @param g
-     * @param matrixStack
-     * @param vertexConsumerProvider
-     * @param i
-     * @param ci
-     */
-    @Inject(method = "render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/render /VertexConsumerProvider;I)V", at = @At(value = "HEAD"))
-    private void onRenderHead(AbstractClientPlayer abstractClientPlayerEntity,
-                              float f, float g, PoseStack matrixStack,
-                              MultiBufferSource vertexConsumerProvider,
-                              int i, CallbackInfo ci)
-    {
-        final RenderPlayerEvent renderPlayerEvent =
-                new RenderPlayerEvent(abstractClientPlayerEntity);
-        EventBus.INSTANCE.dispatch(renderPlayerEvent);
-        yaw = abstractClientPlayerEntity.getYRot();
-        prevYaw = abstractClientPlayerEntity.yRotO;
-        bodyYaw = abstractClientPlayerEntity.yBodyRot;
-        prevBodyYaw = abstractClientPlayerEntity.yBodyRotO;
-        headYaw = abstractClientPlayerEntity.yHeadRot;
-        prevHeadYaw = abstractClientPlayerEntity.yHeadRotO;
-        pitch = abstractClientPlayerEntity.getXRot();
-        prevPitch = abstractClientPlayerEntity.xRotO;
-        prevSneaking = abstractClientPlayerEntity.isShiftKeyDown();
-        if (renderPlayerEvent.isCanceled())
-        {
-            abstractClientPlayerEntity.setYRot(renderPlayerEvent.getYaw());
-            abstractClientPlayerEntity.yRotO = renderPlayerEvent.getYaw();
-            abstractClientPlayerEntity.setYBodyRot(renderPlayerEvent.getYaw());
-            abstractClientPlayerEntity.yBodyRotO = renderPlayerEvent.getYaw();
-            abstractClientPlayerEntity.setYHeadRot(renderPlayerEvent.getYaw());
-            abstractClientPlayerEntity.yHeadRotO = renderPlayerEvent.getYaw();
-            abstractClientPlayerEntity.setXRot(renderPlayerEvent.getPitch());
-            abstractClientPlayerEntity.xRotO = renderPlayerEvent.getPitch();
-            // abstractClientPlayerEntity.setSneaking(renderPlayerEvent.isSneaking());
-        }
-    }
+   @Inject(
+      method = {"render(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render /VertexConsumerProvider;I)V"},
+      at = {@At("HEAD")}
+   )
+   private void onRenderHead(
+      AbstractClientPlayer abstractClientPlayerEntity,
+      float f,
+      float g,
+      PoseStack matrixStack,
+      MultiBufferSource vertexConsumerProvider,
+      int i,
+      CallbackInfo ci
+   ) {
+      RenderPlayerEvent renderPlayerEvent = new RenderPlayerEvent(abstractClientPlayerEntity);
+      EventBus.INSTANCE.dispatch(renderPlayerEvent);
+      this.yaw = abstractClientPlayerEntity.getYRot();
+      this.prevYaw = abstractClientPlayerEntity.yRotO;
+      this.bodyYaw = abstractClientPlayerEntity.yBodyRot;
+      this.prevBodyYaw = abstractClientPlayerEntity.yBodyRotO;
+      this.headYaw = abstractClientPlayerEntity.yHeadRot;
+      this.prevHeadYaw = abstractClientPlayerEntity.yHeadRotO;
+      this.pitch = abstractClientPlayerEntity.getXRot();
+      this.prevPitch = abstractClientPlayerEntity.xRotO;
+      this.prevSneaking = abstractClientPlayerEntity.isShiftKeyDown();
+      if (renderPlayerEvent.isCanceled()) {
+         abstractClientPlayerEntity.setYRot(renderPlayerEvent.getYaw());
+         abstractClientPlayerEntity.yRotO = renderPlayerEvent.getYaw();
+         abstractClientPlayerEntity.setYBodyRot(renderPlayerEvent.getYaw());
+         abstractClientPlayerEntity.yBodyRotO = renderPlayerEvent.getYaw();
+         abstractClientPlayerEntity.setYHeadRot(renderPlayerEvent.getYaw());
+         abstractClientPlayerEntity.yHeadRotO = renderPlayerEvent.getYaw();
+         abstractClientPlayerEntity.setXRot(renderPlayerEvent.getPitch());
+         abstractClientPlayerEntity.xRotO = renderPlayerEvent.getPitch();
+      }
+   }
 
-    /**
-     * @param abstractClientPlayerEntity
-     * @param f
-     * @param g
-     * @param matrixStack
-     * @param vertexConsumerProvider
-     * @param i
-     * @param ci
-     */
-    @Inject(method = "render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/render /VertexConsumerProvider;I)V", at = @At(value = "TAIL"))
-    private void onRenderTail(AbstractClientPlayer abstractClientPlayerEntity,
-                              float f, float g, PoseStack matrixStack,
-                              MultiBufferSource vertexConsumerProvider,
-                              int i, CallbackInfo ci)
-    {
-        abstractClientPlayerEntity.setYRot(yaw);
-        abstractClientPlayerEntity.yRotO = prevYaw;
-        abstractClientPlayerEntity.setYBodyRot(bodyYaw);
-        abstractClientPlayerEntity.yBodyRotO = prevBodyYaw;
-        abstractClientPlayerEntity.setYHeadRot(headYaw);
-        abstractClientPlayerEntity.yHeadRotO = prevHeadYaw;
-        abstractClientPlayerEntity.setXRot(pitch);
-        abstractClientPlayerEntity.xRotO = prevPitch;
-        // abstractClientPlayerEntity.setSneaking(prevSneaking);
-    }
+   @Inject(
+      method = {"render(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render /VertexConsumerProvider;I)V"},
+      at = {@At("TAIL")}
+   )
+   private void onRenderTail(
+      AbstractClientPlayer abstractClientPlayerEntity,
+      float f,
+      float g,
+      PoseStack matrixStack,
+      MultiBufferSource vertexConsumerProvider,
+      int i,
+      CallbackInfo ci
+   ) {
+      abstractClientPlayerEntity.setYRot(this.yaw);
+      abstractClientPlayerEntity.yRotO = this.prevYaw;
+      abstractClientPlayerEntity.setYBodyRot(this.bodyYaw);
+      abstractClientPlayerEntity.yBodyRotO = this.prevBodyYaw;
+      abstractClientPlayerEntity.setYHeadRot(this.headYaw);
+      abstractClientPlayerEntity.yHeadRotO = this.prevHeadYaw;
+      abstractClientPlayerEntity.setXRot(this.pitch);
+      abstractClientPlayerEntity.xRotO = this.prevPitch;
+   }
 
-    @Redirect(method = "setupRotations(Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;isFallFlying()Z"))
-    private boolean hookSetupTransforms(AbstractClientPlayer instance)
-    {
-        ElytraTransformEvent elytraTransformEvent = new ElytraTransformEvent(instance);
-        EventBus.INSTANCE.dispatch(elytraTransformEvent);
-        if (elytraTransformEvent.isCanceled())
-        {
-            return false;
-        }
-        return instance.isFallFlying();
-    }
+   @Redirect(
+      method = {"setupRotations(Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V"},
+      at = @At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/client/player/AbstractClientPlayer;isFallFlying()Z"
+      )
+   )
+   private boolean hookSetupTransforms(AbstractClientPlayer instance) {
+      ElytraTransformEvent elytraTransformEvent = new ElytraTransformEvent(instance);
+      EventBus.INSTANCE.dispatch(elytraTransformEvent);
+      return elytraTransformEvent.isCanceled() ? false : instance.isFallFlying();
+   }
 }

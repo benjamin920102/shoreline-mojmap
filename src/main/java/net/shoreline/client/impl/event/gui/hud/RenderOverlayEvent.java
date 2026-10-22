@@ -1,224 +1,130 @@
 package net.shoreline.client.impl.event.gui.hud;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.shoreline.client.mixin.gui.hud.MixinInGameHud;
 import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
-/**
- * @author linus
- * @see MixinInGameHud
- * @since 1.0
- */
-public class RenderOverlayEvent extends Event
-{
-    //
-    private final GuiGraphics context;
+public class RenderOverlayEvent extends Event {
+   private final GuiGraphics context;
 
+   public RenderOverlayEvent(GuiGraphics context) {
+      this.context = context;
+   }
 
-    /**
-     * @param context
-     */
-    public RenderOverlayEvent(GuiGraphics context)
-    {
-        this.context = context;
-    }
+   public GuiGraphics getContext() {
+      return this.context;
+   }
 
-    /**
-     * @return
-     */
-    public GuiGraphics getContext()
-    {
-        return context;
-    }
+   @Cancelable
+   public static class Block extends RenderOverlayEvent {
+      public Block(GuiGraphics context) {
+         super(context);
+      }
+   }
 
-    public static class Post extends RenderOverlayEvent
-    {
-        //
-        private final float tickDelta;
+   @Cancelable
+   public static class BossBar extends RenderOverlayEvent {
+      public BossBar(GuiGraphics context) {
+         super(context);
+      }
+   }
 
-        /**
-         * @param context
-         * @param tickDelta
-         */
-        public Post(GuiGraphics context, float tickDelta)
-        {
-            super(context);
-            this.tickDelta = tickDelta;
-        }
+   @Cancelable
+   public static class Fire extends RenderOverlayEvent {
+      public Fire(GuiGraphics context) {
+         super(context);
+      }
+   }
 
-        /**
-         * @return
-         */
-        public float getTickDelta()
-        {
-            return tickDelta;
-        }
-    }
+   @Cancelable
+   public static class Frostbite extends RenderOverlayEvent {
+      public Frostbite(GuiGraphics context) {
+         super(context);
+      }
+   }
 
-    @Cancelable
-    public static class StatusEffect extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public StatusEffect(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
+   @Cancelable
+   public static class Hotbar extends RenderOverlayEvent {
+      public Hotbar(GuiGraphics context) {
+         super(context);
+      }
+   }
 
-    @Cancelable
-    public static class ItemName extends RenderOverlayEvent
-    {
-        //
-        private int x, y;
+   @Cancelable
+   public static class ItemName extends RenderOverlayEvent {
+      private int x;
+      private int y;
 
-        /**
-         * @param context
-         */
-        public ItemName(GuiGraphics context)
-        {
-            super(context);
-        }
+      public ItemName(GuiGraphics context) {
+         super(context);
+      }
 
-        public boolean isUpdateXY()
-        {
-            return x != 0 && y != 0;
-        }
+      public boolean isUpdateXY() {
+         return this.x != 0 && this.y != 0;
+      }
 
-        public int getX()
-        {
-            return x;
-        }
+      public int getX() {
+         return this.x;
+      }
 
-        /**
-         * @param x
-         */
-        public void setX(int x)
-        {
-            this.x = x;
-        }
+      public void setX(int x) {
+         this.x = x;
+      }
 
-        public int getY()
-        {
-            return y;
-        }
+      public int getY() {
+         return this.y;
+      }
 
-        /**
-         * @param y
-         */
-        public void setY(int y)
-        {
-            this.y = y;
-        }
-    }
+      public void setY(int y) {
+         this.y = y;
+      }
+   }
 
-    @Cancelable
-    public static class Fire extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public Fire(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
+   @Cancelable
+   public static class Portal extends RenderOverlayEvent {
+      public Portal(GuiGraphics context) {
+         super(context);
+      }
+   }
 
-    @Cancelable
-    public static class Portal extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public Portal(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
+   public static class Post extends RenderOverlayEvent {
+      private final float tickDelta;
 
-    @Cancelable
-    public static class Water extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public Water(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
+      public Post(GuiGraphics context, float tickDelta) {
+         super(context);
+         this.tickDelta = tickDelta;
+      }
 
-    @Cancelable
-    public static class Block extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public Block(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
+      public float getTickDelta() {
+         return this.tickDelta;
+      }
+   }
 
-    @Cancelable
-    public static class Spyglass extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public Spyglass(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
+   @Cancelable
+   public static class Pumpkin extends RenderOverlayEvent {
+      public Pumpkin(GuiGraphics context) {
+         super(context);
+      }
+   }
 
-    @Cancelable
-    public static class Pumpkin extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public Pumpkin(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
+   @Cancelable
+   public static class Spyglass extends RenderOverlayEvent {
+      public Spyglass(GuiGraphics context) {
+         super(context);
+      }
+   }
 
-    @Cancelable
-    public static class BossBar extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public BossBar(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
+   @Cancelable
+   public static class StatusEffect extends RenderOverlayEvent {
+      public StatusEffect(GuiGraphics context) {
+         super(context);
+      }
+   }
 
-    @Cancelable
-    public static class Frostbite extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public Frostbite(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
-
-    @Cancelable
-    public static class Hotbar extends RenderOverlayEvent
-    {
-        /**
-         * @param context
-         */
-        public Hotbar(GuiGraphics context)
-        {
-            super(context);
-        }
-    }
+   @Cancelable
+   public static class Water extends RenderOverlayEvent {
+      public Water(GuiGraphics context) {
+         super(context);
+      }
+   }
 }

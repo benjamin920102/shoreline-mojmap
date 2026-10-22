@@ -6,49 +6,27 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.shoreline.eventbus.annotation.Cancelable;
 import net.shoreline.eventbus.event.Event;
 
-/**
- * @author linus
- * @since 1.0
- */
 @Cancelable
-public class AttackBlockEvent extends Event
-{
-    //
-    private final BlockPos pos;
-    private final BlockState state;
-    //
-    private final Direction direction;
+public class AttackBlockEvent extends Event {
+   private final BlockPos pos;
+   private final BlockState state;
+   private final Direction direction;
 
-    /**
-     * @param pos
-     * @param state
-     * @param direction
-     */
-    public AttackBlockEvent(BlockPos pos, BlockState state, Direction direction)
-    {
-        this.pos = pos;
-        this.state = state;
-        this.direction = direction;
-    }
+   public AttackBlockEvent(BlockPos pos, BlockState state, Direction direction) {
+      this.pos = pos;
+      this.state = state;
+      this.direction = direction;
+   }
 
-    /**
-     * @return
-     */
-    public BlockPos getPos()
-    {
-        return pos;
-    }
+   public BlockPos getPos() {
+      return this.pos;
+   }
 
-    public BlockState getState()
-    {
-        return state;
-    }
+   public BlockState getState() {
+      return this.state;
+   }
 
-    /**
-     * @return
-     */
-    public Direction getDirection()
-    {
-        return direction;
-    }
+   public Direction getDirection() {
+      return this.direction;
+   }
 }

@@ -5,32 +5,17 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/**
- * @author linus
- * @see AccessorExplosionS2CPacket
- * @since 1.0
- */
-@Mixin(ClientboundExplodePacket.class)
-public interface AccessorExplosionS2CPacket
-{
-    /**
-     * @param playerVelocityX
-     */
-    @Accessor("knockbackX")
-    @Mutable
-    void setPlayerVelocityX(float playerVelocityX);
+@Mixin({ClientboundExplodePacket.class})
+public interface AccessorExplosionS2CPacket {
+   @Accessor("knockbackX")
+   @Mutable
+   void setPlayerVelocityX(float var1);
 
-    /**
-     * @param playerVelocityY
-     */
-    @Accessor("knockbackY")
-    @Mutable
-    void setPlayerVelocityY(float playerVelocityY);
+   @Accessor("knockbackY")
+   @Mutable
+   void setPlayerVelocityY(float var1);
 
-    /**
-     * @param playerVelocityZ
-     */
-    @Accessor("knockbackZ")
-    @Mutable
-    void setPlayerVelocityZ(float playerVelocityZ);
+   @Accessor("knockbackZ")
+   @Mutable
+   void setPlayerVelocityZ(float var1);
 }

@@ -1,7 +1,6 @@
 package net.shoreline.client.impl.manager.combat.hole;
 
 import com.google.common.collect.Lists;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -11,176 +10,109 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * @author linus
- * @since 1.0
- */
-public class Hole implements Position
-{
-    //
-    private final List<BlockPos> holeOffsets;
-    //
-    private final BlockPos origin;
-    private final HoleType safety;
+public class Hole implements Position {
+   private final List<BlockPos> holeOffsets;
+   private final BlockPos origin;
+   private final HoleType safety;
 
-    /**
-     * @param origin
-     * @param safety
-     * @param holeOffsets
-     */
-    public Hole(BlockPos origin, HoleType safety, BlockPos... holeOffsets)
-    {
-        this.origin = origin;
-        this.safety = safety;
-        this.holeOffsets = Lists.newArrayList(holeOffsets);
-        //
-        this.holeOffsets.add(origin);
-    }
+   public Hole(BlockPos origin, HoleType safety, BlockPos... holeOffsets) {
+      this.origin = origin;
+      this.safety = safety;
+      this.holeOffsets = Lists.newArrayList(holeOffsets);
+      this.holeOffsets.add(origin);
+   }
 
-    /**
-     * @param entity
-     * @return
-     */
-    public double squaredDistanceTo(Entity entity)
-    {
-        return entity.getEyePosition().distanceToSqr(getCenter());
-    }
+   public double squaredDistanceTo(Entity entity) {
+      return entity.getEyePosition().distanceToSqr(this.getCenter());
+   }
 
-    public boolean isStandard()
-    {
-        return holeOffsets.size() == 5;
-    }
+   public boolean isStandard() {
+      return this.holeOffsets.size() == 5;
+   }
 
-    public boolean isDouble()
-    {
-        return holeOffsets.size() == 8;
-    }
+   public boolean isDouble() {
+      return this.holeOffsets.size() == 8;
+   }
 
-    public boolean isDoubleX()
-    {
-        return isDouble() && holeOffsets.contains(origin.offset(2, 0, 0));
-    }
+   public boolean isDoubleX() {
+      return this.isDouble() && this.holeOffsets.contains(this.origin.offset(2, 0, 0));
+   }
 
-    public boolean isDoubleZ()
-    {
-        return isDouble() && holeOffsets.contains(origin.offset(0, 0, 2));
-    }
+   public boolean isDoubleZ() {
+      return this.isDouble() && this.holeOffsets.contains(this.origin.offset(0, 0, 2));
+   }
 
-    public boolean isQuad()
-    {
-        return holeOffsets.size() == 12;
-    }
+   public boolean isQuad() {
+      return this.holeOffsets.size() == 12;
+   }
 
-    public HoleType getSafety()
-    {
-        return safety;
-    }
+   public HoleType getSafety() {
+      return this.safety;
+   }
 
-    public BlockPos getPos()
-    {
-        return origin;
-    }
+   public BlockPos getPos() {
+      return this.origin;
+   }
 
-    public List<BlockPos> getHoleOffsets()
-    {
-        return holeOffsets;
-    }
+   public List<BlockPos> getHoleOffsets() {
+      return this.holeOffsets;
+   }
 
-    /**
-     * @param off
-     * @return
-     */
-    public boolean addHoleOffsets(BlockPos... off)
-    {
-        return holeOffsets.addAll(Arrays.asList(off));
-    }
+   public boolean addHoleOffsets(BlockPos... off) {
+      return this.holeOffsets.addAll(Arrays.asList(off));
+   }
 
-    /**
-     * @return
-     */
-    public Vec3 getCenter()
-    {
-        BlockPos center;
-        // This shit stupid
-        if (isDoubleX())
-        {
-            center = origin.offset(1, 0, 0);
-        }
-        else if (isDoubleZ())
-        {
-            center = origin.offset(0, 0, -1);
-        }
-        else if (isQuad())
-        {
-            center = origin.offset(1, 0, -1);
-        }
-        else
-        {
-            return origin.getCenter();
-        }
-        return Vec3.atLowerCornerOf(center);
-    }
+   public Vec3 getCenter() {
+      BlockPos center;
+      if (this.isDoubleX()) {
+         center = this.origin.offset(1, 0, 0);
+      } else if (this.isDoubleZ()) {
+         center = this.origin.offset(0, 0, -1);
+      } else {
+         if (!this.isQuad()) {
+            return this.origin.getCenter();
+         }
 
-    public AABB getBoundingBox(double height)
-    {
-        AABB render = null;
-        if (getSafety() == HoleType.VOID)
-        {
-            render = new AABB(x(), y(), z(), x() + 1.0, y() + 1.0, z() + 1.0);
-        }
-        else if (isDoubleX())
-        {
-            render = new AABB(x(), y(), z(), x() + 2.0, y() + height, z() + 1.0);
-        }
-        else if (isDoubleZ())
-        {
-            render = new AABB(x(), y(), z(), x() + 1.0, y() + height, z() + 2.0);
-        }
-        else if (isQuad())
-        {
-            render = new AABB(x(), y(), z(), x() + 2.0, y() + height, z() + 2.0);
-        }
-        else if (isStandard())
-        {
-            render = new AABB(x(), y(), z(), x() + 1.0, y() + height, z() + 1.0);
-        }
-        return render;
-    }
+         center = this.origin.offset(1, 0, -1);
+      }
 
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (obj instanceof Hole hole)
-        {
-            return new HashSet<>(hole.getHoleOffsets()).containsAll(holeOffsets);
-        }
-        return false;
-    }
+      return Vec3.atLowerCornerOf(center);
+   }
 
-    /**
-     * Returns the X coordinate.
-     */
-    @Override
-    public double x()
-    {
-        return origin.getX();
-    }
+   public AABB getBoundingBox(double height) {
+      AABB render = null;
+      if (this.getSafety() == HoleType.VOID) {
+         render = new AABB(this.x(), this.y(), this.z(), this.x() + 1.0, this.y() + 1.0, this.z() + 1.0);
+      } else if (this.isDoubleX()) {
+         render = new AABB(this.x(), this.y(), this.z(), this.x() + 2.0, this.y() + height, this.z() + 1.0);
+      } else if (this.isDoubleZ()) {
+         render = new AABB(this.x(), this.y(), this.z(), this.x() + 1.0, this.y() + height, this.z() + 2.0);
+      } else if (this.isQuad()) {
+         render = new AABB(this.x(), this.y(), this.z(), this.x() + 2.0, this.y() + height, this.z() + 2.0);
+      } else if (this.isStandard()) {
+         render = new AABB(this.x(), this.y(), this.z(), this.x() + 1.0, this.y() + height, this.z() + 1.0);
+      }
 
-    /**
-     * Returns the Y coordinate.
-     */
-    @Override
-    public double y()
-    {
-        return origin.getY();
-    }
+      return render;
+   }
 
-    /**
-     * Returns the Z coordinate.
-     */
-    @Override
-    public double z()
-    {
-        return origin.getZ();
-    }
+   @Override
+   public boolean equals(Object obj) {
+      return obj instanceof Hole hole ? new HashSet<>(hole.getHoleOffsets()).containsAll(this.holeOffsets) : false;
+   }
+
+   @Override
+   public double x() {
+      return this.origin.getX();
+   }
+
+   @Override
+   public double y() {
+      return this.origin.getY();
+   }
+
+   @Override
+   public double z() {
+      return this.origin.getZ();
+   }
 }

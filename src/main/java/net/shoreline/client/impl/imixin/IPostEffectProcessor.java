@@ -4,6 +4,5 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 
 @IMixin
 public interface IPostEffectProcessor {
-
-    void overwriteBuffer(String name, RenderTarget buffer);
+   void overwriteBuffer(String var1, RenderTarget var2);
 }

@@ -1,30 +1,22 @@
 package net.shoreline.client.api.account.msa.model;
 
-/**
- * @author xgraza
- * @since 01/14/24
- */
-public final class XboxLiveData
-{
-    private String token, userHash;
+public final class XboxLiveData {
+   private String token;
+   private String userHash;
 
-    public String getToken()
-    {
-        return token;
-    }
+   public String getToken() {
+      return this.token;
+   }
 
-    public void setToken(String token)
-    {
-        this.token = token;
-    }
+   public void setToken(String token) {
+      this.token = token;
+   }
 
-    public String getUserHash()
-    {
-        return userHash;
-    }
+   public String getUserHash() {
+      return this.userHash;
+   }
 
-    public void setUserHash(String userHash)
-    {
-        this.userHash = userHash;
-    }
+   public void setUserHash(String userHash) {
+      this.userHash = userHash;
+   }
 }
